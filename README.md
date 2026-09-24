@@ -12,6 +12,21 @@ npm run dev
 
 Откройте http://127.0.0.1:5173. Сборка — `npm run build`, проверка типов входит в неё.
 
+### Docker
+
+Продакшн-сборка (Node собирает, nginx раздаёт статику) — http://localhost:8080:
+
+```bash
+docker compose up --build web
+```
+
+Разработка с hot reload в контейнере — http://localhost:5173:
+
+```bash
+docker compose --profile dev up dev
+```
+
+nginx настроен под SPA: прямые ссылки вида `/pet/persik` и `/admin/pets` открываются без 404. Файлы из `/assets/` кешируются на год (в их именах есть хеш), `index.html` — без кеша. Проверка здоровья — `GET /healthz`.
 
 ## Демо-доступ
 

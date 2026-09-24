@@ -1,0 +1,27 @@
+services:
+  # Продакшн-сборка: nginx со статикой — http://localhost:8080
+  web:
+    build: .
+    image: dobryi-dom:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # Разработка с hot reload — http://localhost:5173
+  # Запуск: docker compose --profile dev up dev
+  dev:
+    profiles: ["dev"]
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    environment:
+      # На Windows/macOS события файловой системы не доходят в контейнер — следим опросом
+      - VITE_POLLING=1
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+
+volumes:
+  node_modules:
