@@ -1,0 +1,103 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  check:
+    name: Линтер и сборка
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build # включает tsc -b
+
+  docker:
+    name: Образ Docker
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Теги образа
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Сборка образа
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: dobryi-dom:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-тест контейнера
+        run: |
+          docker run -d --name app -p 8080:80 dobryi-dom:ci
+          for i in $(seq 1 20); do
+            curl -fs http://localhost:8080/healthz && break
+            sleep 1
+          done
+          curl -fs http://localhost:8080/healthz | grep -q ok
+          # SPA-fallback: прямые ссылки должны отдавать index.html
+          for path in / /catalog /pet/persik /admin/pets; do
+            curl -fs "http://localhost:8080$path" | grep -q '<div id="root">' || { echo "FAIL $path"; exit 1; }
+          done
+          # Хешированные ассеты кешируются надолго
+          asset=$(curl -fs http://localhost:8080/ | grep -o '/assets/[^"]*\.js' | head -1)
+          curl -fsI "http://localhost:8080$asset" | grep -qi 'cache-control: public, immutable'
+          docker inspect --format '{{.State.Health.Status}}' app
+
+      - name: Логи контейнера
+        if: failure()
+        run: docker logs app
+
+      - name: Вход в GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Публикация образа
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

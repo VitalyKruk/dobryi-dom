@@ -28,6 +28,20 @@ docker compose --profile dev up dev
 
 nginx настроен под SPA: прямые ссылки вида `/pet/persik` и `/admin/pets` открываются без 404. Файлы из `/assets/` кешируются на год (в их именах есть хеш), `index.html` — без кеша. Проверка здоровья — `GET /healthz`.
 
+### CI: GitHub Actions
+
+Workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) запускается на push в `main`, на теги `v*` и на pull request:
+
+1. **Линтер и сборка** — `npm ci`, `npm run lint`, `npm run build` (с проверкой типов).
+2. **Образ Docker** — сборка с кешем GitHub Actions и smoke-тест контейнера: `/healthz`, прямые ссылки SPA, кеш ассетов.
+3. **Публикация** (кроме PR) — в GitHub Container Registry: `ghcr.io/vitalykruk/dobryi-dom` с тегами `latest` (main), `sha-…`, имя ветки, версии из тега `v1.2.3`.
+
+Запустить опубликованный образ (для приватного репозитория сначала `docker login ghcr.io`):
+
+```bash
+docker run -p 8081:80 ghcr.io/vitalykruk/dobryi-dom:latest
+```
+
 ## Демо-доступ
 
 На странице `/login` есть кнопки быстрого входа. Пароль у всех — `demo1234`.
