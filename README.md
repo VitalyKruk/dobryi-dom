@@ -14,7 +14,7 @@ npm run dev
 
 ### Docker
 
-Продакшн-сборка (Node собирает, nginx раздаёт статику) — http://localhost:8080:
+Продакшн-сборка (Node собирает, nginx раздаёт статику) — http://localhost:8081 (другой порт — `WEB_PORT=9000 docker compose up web`):
 
 ```bash
 docker compose up --build web

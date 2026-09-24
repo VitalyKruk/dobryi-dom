@@ -1,10 +1,10 @@
 services:
-  # Продакшн-сборка: nginx со статикой — http://localhost:8080
+  # Продакшн-сборка: nginx со статикой — http://localhost:8081 (порт меняется через WEB_PORT)
   web:
     build: .
     image: dobryi-dom:latest
     ports:
-      - "8080:80"
+      - "${WEB_PORT:-8081}:80"
     restart: unless-stopped
 
   # Разработка с hot reload — http://localhost:5173
@@ -15,7 +15,7 @@ services:
     working_dir: /app
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
     ports:
-      - "5173:5173"
+      - "${DEV_PORT:-5173}:5173"
     environment:
       # На Windows/macOS события файловой системы не доходят в контейнер — следим опросом
       - VITE_POLLING=1
