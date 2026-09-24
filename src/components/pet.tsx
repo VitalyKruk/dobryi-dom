@@ -42,7 +42,8 @@ export function PetImage({
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           onError={() => setFailed(true)}
-          className="size-full object-cover"
+          // Фото с Unsplash уже обрезаны по мордочке; для загруженных смещаем кадр чуть вверх — морды обычно там
+          className="size-full object-cover object-[50%_35%]"
         />
       ) : (
         <div role="img" aria-label={alt} className="flex size-full items-center justify-center text-secondary-border">
