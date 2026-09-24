@@ -28,6 +28,27 @@ docker compose --profile dev up dev
 
 nginx настроен под SPA: прямые ссылки вида `/pet/persik` и `/admin/pets` открываются без 404. Файлы из `/assets/` кешируются на год (в их именах есть хеш), `index.html` — без кеша. Проверка здоровья — `GET /healthz`.
 
+### Проверка на уязвимости
+
+```bash
+npm run security
+```
+
+Скрипт [scripts/security-scan.mjs](scripts/security-scan.mjs) запускает:
+
+1. **npm audit** — известные уязвимости в npm-зависимостях.
+2. **Trivy fs** — уязвимости в `package-lock.json`, утёкшие секреты (ключи, токены) и ошибки в Dockerfile/compose.
+3. **Trivy image** — пакеты ОС в собранном образе (перед этим образ пересобирается).
+
+Считаются находки уровня HIGH и CRITICAL; при них код выхода 1. Trivy работает в Docker, ставить его не нужно. Отчёты складываются в `.security/`.
+
+- `npm run security:quick` — без сборки и сканирования образа.
+- `npm run security -- --if-changed` — пропустить, если с последней успешной проверки ничего не менялось.
+
+Trivy не проверяет на секреты файлы с `test` в пути — это его встроенное правило для тестовых фикстур.
+
+**Автозапуск в Claude Code:** Stop-хук из [.claude/settings.json](.claude/settings.json) после каждого хода, в котором менялись файлы, запускает [scripts/security-hook.mjs](scripts/security-hook.mjs). При находках Claude получает отчёт и исправляет проблему, прежде чем закончить ход.
+
 ## Демо-доступ
 
 На странице `/login` есть кнопки быстрого входа. Пароль у всех — `demo1234`.

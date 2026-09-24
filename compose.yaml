@@ -4,7 +4,7 @@ services:
     build: .
     image: dobryi-dom:latest
     ports:
-      - "${WEB_PORT:-8081}:80"
+      - "${WEB_PORT:-8081}:8080"
     restart: unless-stopped
 
   # Разработка с hot reload — http://localhost:5173
