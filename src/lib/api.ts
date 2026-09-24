@@ -23,7 +23,8 @@ import type {
   Volunteer,
 } from "./types"
 
-const DB_KEY = "dd:db:v1"
+// v2: кадрирование фото по мордочке — старые URL в localStorage нужно заменить
+const DB_KEY = "dd:db:v2"
 
 type DB = {
   pets: Pet[]
