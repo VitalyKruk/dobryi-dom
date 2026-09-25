@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
@@ -168,7 +168,11 @@ function MobileFilters({ value, onApply }: { value: PetFilters; onApply: (f: Pet
     if (!open) return
     let alive = true
     setCount(null)
-    api.countPets(debounced).then((n) => alive && setCount(n))
+    // -1 — посчитать не удалось: кнопка остаётся рабочей, каталог сам покажет ошибку
+    api.countPets(debounced).then(
+      (n) => alive && setCount(n),
+      () => alive && setCount(-1),
+    )
     return () => {
       alive = false
     }
@@ -211,7 +215,9 @@ function MobileFilters({ value, onApply }: { value: PetFilters; onApply: (f: Pet
           >
             {count === null
               ? "Считаем…"
-              : count === 0
+              : count === -1
+                ? "Показать"
+                : count === 0
                 ? "Никого не нашли"
                 : `Показать ${count} ${plural(count, ["питомца", "питомца", "питомцев"])}`}
           </Button>
@@ -369,6 +375,16 @@ export default function CatalogPage() {
 
           {status === "error" ? (
             <ErrorState onRetry={reload} />
+          ) : status === "success" && data.total === 0 && active === 0 && !filters.q ? (
+            <EmptyState
+              title="Сейчас в каталоге никого нет 🎉"
+              text="Все хвосты нашли дом или забронированы. Загляните позже — новенькие появляются каждую неделю."
+              action={
+                <Button asChild variant="outline">
+                  <Link to="/help">Как ещё помочь приюту</Link>
+                </Button>
+              }
+            />
           ) : status === "success" && data.total === 0 ? (
             <EmptyState
               title="Никого не нашли по этим фильтрам 🐾"

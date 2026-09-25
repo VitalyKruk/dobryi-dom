@@ -71,7 +71,9 @@ export default function DashboardPage() {
                       <Skeleton className="h-10 w-full" />
                     </li>
                   ))
-                : d.apps.slice(0, 5).map((a) => {
+                : d.apps.length === 0
+                  ? [<li key="empty" className="py-4 text-muted-foreground">Заявок пока нет — как только кто-то откликнется, они появятся здесь.</li>]
+                  : d.apps.slice(0, 5).map((a) => {
                     const pet = d.pets.find((p) => p.id === a.petId)
                     return (
                       <li key={a.id}>
@@ -113,7 +115,9 @@ export default function DashboardPage() {
                     <Skeleton className="h-10 w-full" />
                   </li>
                 ))
-              : longest.map((p) => {
+              : longest.length === 0
+                ? [<li key="empty" className="py-4 text-muted-foreground">Свободных питомцев нет — все хвосты дома или забронированы 🎉</li>]
+                : longest.map((p) => {
                   const days = daysWaiting(p.addedAt)
                   return (
                     <li key={p.id} className="flex items-center gap-4 py-4">

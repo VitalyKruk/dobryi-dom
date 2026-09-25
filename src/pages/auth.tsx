@@ -142,8 +142,14 @@ export function LoginPage() {
 
   async function demo(email: string) {
     setDemoBusy(email)
-    const u = await login(email, DEMO_PASSWORD)
-    done(u.name, u.role)
+    setServerError("")
+    try {
+      const u = await login(email, DEMO_PASSWORD)
+      done(u.name, u.role)
+    } catch (e) {
+      setServerError((e as Error).message)
+      setDemoBusy(null)
+    }
   }
 
   const demoIcons = { user: UserRound, volunteer: LayoutDashboard, admin: ShieldCheck }

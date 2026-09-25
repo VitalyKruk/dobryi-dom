@@ -81,7 +81,7 @@ export default function AboutPage() {
               <div key={n.label} className="flex flex-col gap-1 rounded-2xl bg-card p-6">
                 <dt className="order-2 text-muted-foreground">{n.label}</dt>
                 <dd className="order-1 text-4xl leading-12 font-extrabold text-secondary-foreground">
-                  {n.value === undefined ? <Skeleton className="h-12 w-20" /> : formatNumber(n.value)}
+                  {n.value !== undefined ? formatNumber(n.value) : stats.status === "error" ? "—" : <Skeleton className="h-12 w-20" />}
                 </dd>
               </div>
             ))}

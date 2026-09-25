@@ -58,10 +58,12 @@ function Details({
   async function addComment() {
     if (!comment.trim()) return
     setBusy(true)
-    const updated = await api.addStaffComment(app.id, user!.name, comment.trim())
-    onUpdate(updated)
-    setComment("")
-    setBusy(false)
+    try {
+      onUpdate(await api.addStaffComment(app.id, user!.name, comment.trim()))
+      setComment("")
+    } finally {
+      setBusy(false) // ошибку покажет общий обработчик в App.tsx
+    }
   }
 
   const rows: [string, string][] = [

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { DemoBanner } from "@/components/demo-banner"
 import { Logo } from "@/components/logo"
 import { useAuth } from "@/context/auth"
 import * as api from "@/lib/api"
@@ -221,10 +222,15 @@ function SubscribeForm() {
     }
     setError("")
     setBusy(true)
-    await api.subscribe(email)
-    setBusy(false)
-    setEmail("")
-    toast.success("Подписка оформлена! Расскажем о новых хвостах первыми 🐾")
+    try {
+      await api.subscribe(email)
+      setEmail("")
+      toast.success("Подписка оформлена! Расскажем о новых хвостах первыми 🐾")
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-2">
@@ -346,6 +352,7 @@ export function SiteLayout() {
         <Outlet />
       </main>
       <Footer />
+      <DemoBanner />
     </div>
   )
 }

@@ -3,6 +3,7 @@
  * поэтому при переходе на Supabase достаточно заменить реализацию здесь.
  * Данные живут в localStorage, задержка имитирует сеть (видны Skeleton-состояния).
  */
+import { demoMode } from "./demo"
 import { ageInMonths } from "./format"
 import {
   ADOPTED_BEFORE_SITE,
@@ -78,10 +79,17 @@ export function resetDemoData() {
   commit()
 }
 
-const wait = (ms = 300 + Math.random() * 300) => new Promise((r) => setTimeout(r, ms))
-const clone = <T>(v: T): T => structuredClone(v)
-
 export class ApiError extends Error {}
+
+/** Имитация сети; в демо-режиме — долгий ответ или падение запроса (см. lib/demo.ts) */
+async function wait(ms = 300 + Math.random() * 300) {
+  const mode = demoMode()
+  await new Promise((r) => setTimeout(r, mode === "slow" ? 2500 : ms))
+  if (mode === "error") throw new ApiError("Сервер не отвечает. Проверьте соединение и попробуйте ещё раз.")
+}
+/** В демо-режиме «empty» списки приходят пустыми */
+const orEmpty = <T>(value: T, empty: T): T => (demoMode() === "empty" ? empty : value)
+const clone = <T>(v: T): T => structuredClone(v)
 
 // ——— Питомцы ———
 
@@ -122,29 +130,30 @@ function sortPets(list: Pet[], sort: PetFilters["sort"] = "newest") {
 
 export async function getPets(filters: PetFilters, page = 1, pageSize = 12) {
   await wait()
-  const all = sortPets(db().pets.filter((p) => matchesFilters(p, filters)), filters.sort)
+  const all = orEmpty(sortPets(db().pets.filter((p) => matchesFilters(p, filters)), filters.sort), [])
   return { items: clone(all.slice((page - 1) * pageSize, page * pageSize)), total: all.length }
 }
 
 export async function countPets(filters: PetFilters) {
   await wait(120)
-  return db().pets.filter((p) => matchesFilters(p, filters)).length
+  return orEmpty(db().pets.filter((p) => matchesFilters(p, filters)).length, 0)
 }
 
 export async function getPet(id: string) {
   await wait()
-  const pet = db().pets.find((p) => p.id === id)
+  const pet = orEmpty(db().pets.find((p) => p.id === id), undefined)
   return pet ? clone(pet) : null
 }
 
 export async function getPetsByIds(ids: string[]) {
   await wait()
-  return clone(db().pets.filter((p) => ids.includes(p.id)))
+  return orEmpty(clone(db().pets.filter((p) => ids.includes(p.id))), [])
 }
 
 export async function getSimilarPets(pet: Pet, limit = 4) {
   await wait()
   const age = ageInMonths(pet.birthDate)
+  if (demoMode() === "empty") return []
   return clone(
     db()
       .pets.filter((p) => p.id !== pet.id && p.species === pet.species && p.status !== "adopted")
@@ -161,7 +170,7 @@ export async function getSimilarPets(pet: Pet, limit = 4) {
 /** «Питомцы недели»: поровну кошек и собак, сначала те, кто ждёт дольше */
 export async function getFeaturedPets(limit = 6) {
   await wait()
-  const free = db().pets.filter((p) => p.status === "available")
+  const free = orEmpty(db().pets.filter((p) => p.status === "available"), [])
   const pick = (s: Pet["species"]) => sortPets(free.filter((p) => p.species === s), "oldest").slice(0, limit / 2)
   const cats = pick("cat")
   const dogs = pick("dog")
@@ -170,17 +179,17 @@ export async function getFeaturedPets(limit = 6) {
 
 export async function getStats() {
   await wait(200)
-  const pets = db().pets
-  const apps = db().applications
+  const pets = orEmpty(db().pets, [])
+  const apps = orEmpty(db().applications, [])
   const weekAgo = Date.now() - 7 * 86_400_000
   return {
-    adopted: ADOPTED_BEFORE_SITE + pets.filter((p) => p.status === "adopted").length,
+    adopted: orEmpty(ADOPTED_BEFORE_SITE, 0) + pets.filter((p) => p.status === "adopted").length,
     waiting: pets.filter((p) => p.status !== "adopted").length,
     available: pets.filter((p) => p.status === "available").length,
     reserved: pets.filter((p) => p.status === "reserved").length,
     newApplications: apps.filter((a) => new Date(a.createdAt).getTime() > weekAgo).length,
     pendingApplications: apps.filter((a) => a.status === "pending").length,
-    volunteers: db().volunteers.length,
+    volunteers: orEmpty(db().volunteers.length, 0),
   }
 }
 
@@ -188,7 +197,7 @@ export async function getStats() {
 
 export async function listAllPets() {
   await wait()
-  return clone(sortPets(db().pets, "newest"))
+  return orEmpty(clone(sortPets(db().pets, "newest")), [])
 }
 
 export async function savePet(pet: Pet) {
@@ -263,6 +272,7 @@ export async function createApplication(input: NewApplication) {
 
 export async function listApplications(opts: { userId?: string; email?: string } = {}) {
   await wait()
+  if (demoMode() === "empty") return []
   return clone(
     db()
       .applications.filter(
@@ -378,7 +388,7 @@ export async function setUserRole(id: string, role: Role) {
 
 export async function listVolunteers() {
   await wait()
-  return clone(db().volunteers)
+  return orEmpty(clone(db().volunteers), [])
 }
 
 export async function saveVolunteers(list: Volunteer[]) {

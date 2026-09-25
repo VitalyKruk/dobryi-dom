@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { ScrollManager, SiteLayout } from "@/components/layout/site-layout"
 import { RequireAuth } from "@/components/require-auth"
 import { AuthProvider } from "@/context/auth"
+import { toast } from "sonner"
+import { ApiError } from "@/lib/api"
 import HomePage from "@/pages/home"
 import CatalogPage from "@/pages/catalog"
 import PetPage from "@/pages/pet"
@@ -24,6 +26,14 @@ const AdminPetsPage = lazy(() => import("@/pages/admin/pets"))
 const PetFormPage = lazy(() => import("@/pages/admin/pet-form"))
 const AdminApplicationsPage = lazy(() => import("@/pages/admin/applications"))
 const AdminVolunteersPage = lazy(() => import("@/pages/admin/volunteers"))
+
+// Страховка: если действие не обработало ошибку API само, пользователь всё равно увидит понятное сообщение
+window.addEventListener("unhandledrejection", (e) => {
+  if (e.reason instanceof ApiError) {
+    e.preventDefault()
+    toast.error(e.reason.message)
+  }
+})
 
 function Root() {
   return (

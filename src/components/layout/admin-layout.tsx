@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { DemoBanner } from "@/components/demo-banner"
 import { Logo } from "@/components/logo"
 import { SkipLink, UserMenu } from "@/components/layout/site-layout"
 import { useAuth, type Permission } from "@/context/auth"
@@ -128,6 +129,7 @@ export function AdminLayout() {
           </div>
         </main>
       </div>
+      <DemoBanner />
     </div>
   )
 }

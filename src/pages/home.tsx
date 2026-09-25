@@ -5,7 +5,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Skeleton } from "@/components/ui/skeleton"
 import { PawIcon } from "@/components/illustrations"
 import { PetCard, PetCardSkeleton, PetImage } from "@/components/pet"
-import { ErrorState } from "@/components/states"
+import { EmptyState, ErrorState } from "@/components/states"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
 import { formatNumber, plural } from "@/lib/format"
@@ -37,6 +37,7 @@ function Hero() {
             <a href="#how">Как это работает</a>
           </Button>
         </div>
+        {stats.status !== "error" && (
         <dl className="mt-4 grid w-full max-w-md grid-cols-2 gap-4">
           {[
             { value: stats.data?.adopted, label: (n: number) => `${plural(n, ["питомец нашёл", "питомца нашли", "питомцев нашли"])} дом` },
@@ -60,6 +61,7 @@ function Hero() {
             </div>
           ))}
         </dl>
+        )}
       </div>
       <div className="relative grid grid-cols-2 gap-4" aria-hidden="true">
         <div className="absolute -inset-4 -z-10 rounded-[48px] bg-secondary lg:-inset-8" />
@@ -132,6 +134,16 @@ function PetsOfWeek() {
         </div>
         {status === "error" ? (
           <ErrorState onRetry={reload} />
+        ) : status === "success" && data.length === 0 ? (
+          <EmptyState
+            title="Все хвосты уже нашли дом 🎉"
+            text="Свободных питомцев сейчас нет. Загляните позже или помогите приюту другим способом."
+            action={
+              <Button asChild variant="outline">
+                <Link to="/help">Как помочь</Link>
+              </Button>
+            }
+          />
         ) : (
           <CarouselContent className="-ml-4 md:-ml-6">
             {(status === "loading" ? Array.from({ length: 4 }, () => null) : data!).map((pet, i) => (
