@@ -282,7 +282,6 @@ function ApplyForm({ pet }: { pet: Pet }) {
     try {
       const app = await api.createApplication({
         petId: pet.id,
-        userId: user?.id,
         name: v.name.trim(),
         phone: v.phone,
         email: v.email.trim(),
@@ -299,7 +298,9 @@ function ApplyForm({ pet }: { pet: Pet }) {
       window.scrollTo(0, 0)
       toast.success("Заявка отправлена! 🐾")
     } catch (e) {
-      setServerError((e as Error).message)
+      // Сервер перепроверяет анкету: его замечания по полям перечисляем под общим сообщением
+      const fields = e instanceof api.ApiError && e.fields ? Object.values(e.fields) : []
+      setServerError([(e as Error).message, ...fields].join(" · "))
     }
   })
 

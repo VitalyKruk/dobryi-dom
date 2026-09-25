@@ -88,8 +88,8 @@ function toValues(p?: Pet): Values {
   }
 }
 
-/** Уменьшаем фото до 1200px и JPEG 0.82 — иначе localStorage быстро переполнится */
-function resizeImage(file: File): Promise<string> {
+/** Уменьшаем фото до 1200px и JPEG 0.82 перед загрузкой — быстрее и меньше места на сервере */
+function resizeImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
@@ -100,7 +100,7 @@ function resizeImage(file: File): Promise<string> {
       canvas.height = Math.round(img.height * scale)
       canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height)
       URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL("image/jpeg", 0.82))
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Не удалось обработать изображение"))), "image/jpeg", 0.82)
     }
     img.onerror = () => reject(new Error("Не удалось прочитать изображение"))
     img.src = url
@@ -118,7 +118,9 @@ function PhotoUploader({ value, onChange, error }: { value: string[]; onChange: 
     if (images.length < files.length) toast.error("Можно загружать только изображения")
     setBusy(true)
     try {
-      const urls = await Promise.all(images.slice(0, 8 - value.length).map(resizeImage))
+      // Каждое фото сразу уходит на сервер (POST /api/uploads); в форме остаётся его адрес
+      const blobs = await Promise.all(images.slice(0, 8 - value.length).map(resizeImage))
+      const urls = await Promise.all(blobs.map((b) => api.uploadPhoto(b)))
       onChange([...value, ...urls])
     } catch (e) {
       toast.error((e as Error).message)
@@ -246,7 +248,7 @@ function EnumSelect({
 function PetForm({ pet }: { pet?: Pet }) {
   const navigate = useNavigate()
   const saved = useRef(false)
-  const { register, control, handleSubmit, formState, watch } = useForm<Values, unknown, Output>({
+  const { register, control, handleSubmit, formState, watch, setError } = useForm<Values, unknown, Output>({
     resolver: zodResolver(schema),
     mode: "onTouched",
     defaultValues: toValues(pet),
@@ -266,16 +268,26 @@ function PetForm({ pet }: { pet?: Pet }) {
 
   const onSubmit = handleSubmit(
     async (out) => {
-      const data: Pet = {
+      const data: api.PetInput = {
         ...out,
-        id: pet?.id ?? api.newPetId(out.name),
-        addedAt: pet?.addedAt ?? new Date().toISOString(),
         traits: out.traits.split(",").map((t) => t.trim()).filter(Boolean),
         specialNeeds: out.specialNeeds || undefined,
         careNotes: out.careNotes ?? "",
         internalNotes: out.internalNotes || undefined,
       }
-      await api.savePet(data)
+      try {
+        await api.savePet(data, pet?.id)
+      } catch (e) {
+        // Серверная валидация: показываем ошибку под соответствующим полем
+        const fields = e instanceof api.ApiError ? e.fields : undefined
+        if (fields) {
+          for (const [key, message] of Object.entries(fields)) {
+            setError(key.split(".")[0] as keyof Values, { message })
+          }
+        }
+        toast.error((e as Error).message)
+        return
+      }
       saved.current = true
       toast.success(pet ? `Карточка «${data.name}» обновлена` : `${data.name} добавлен(а) в каталог 🐾`)
       navigate("/admin/pets")

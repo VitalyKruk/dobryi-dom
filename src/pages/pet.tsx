@@ -163,7 +163,7 @@ function PetSkeleton() {
 }
 
 function Similar({ pet }: { pet: Pet }) {
-  const { status, data, reload } = useAsync(() => api.getSimilarPets(pet, 4), [pet.id])
+  const { status, data, reload } = useAsync(() => api.getSimilarPets(pet), [pet.id])
   if (status === "success" && data.length === 0) return null
   return (
     <section className="container-page section-y" aria-labelledby="similar-title">

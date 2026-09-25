@@ -1,25 +1,32 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import * as api from "@/lib/api"
 import type { Role, User } from "@/lib/types"
 import { readLS, writeLS } from "@/hooks/use-local-storage"
 
-const SESSION_KEY = "dd:session"
 const GUEST_FAVS_KEY = "dd:favs"
+
+// Остатки прототипа, когда «база» жила в браузере: данные теперь на сервере
+for (const legacy of ["dd:db:v1", "dd:db:v2", "dd:session"]) writeLS(legacy, undefined)
 
 type AuthContextValue = {
   user: User | null
+  /** false, пока проверяем сохранённую сессию на сервере */
+  ready: boolean
   login: (email: string, password: string) => Promise<User>
   register: (input: { name: string; email: string; password: string }) => Promise<User>
   logout: () => void
-  updateProfile: (patch: Partial<Omit<User, "id" | "role">>) => Promise<void>
+  updateProfile: (patch: Partial<Omit<User, "id" | "role" | "favorites">>) => Promise<void>
   favorites: string[]
   isFavorite: (petId: string) => boolean
   toggleFavorite: (petId: string, petName?: string) => void
   can: (action: Permission) => boolean
 }
 
-/** Матрица доступа из PROMPT.md, раздел 5 */
+/**
+ * Матрица доступа из PROMPT.md, раздел 5. Здесь она только прячет лишние кнопки —
+ * настоящая проверка прав на сервере (server/auth.ts).
+ */
 export type Permission =
   | "admin.access"
   | "pets.status"
@@ -46,24 +53,35 @@ const permissions: Record<Role, Permission[]> = {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const id = readLS<string | null>(SESSION_KEY, null)
-    return id ? api.getUserSync(id) : null
-  })
+  const [user, setUser] = useState<User | null>(null)
+  const [ready, setReady] = useState(() => !api.getToken())
   const [guestFavs, setGuestFavs] = useState<string[]>(() => readLS(GUEST_FAVS_KEY, []))
+
+  // Восстанавливаем сессию по сохранённому токену
+  useEffect(() => {
+    if (!api.getToken()) return
+    api
+      .getMe()
+      .then(setUser)
+      .catch(() => {
+        // Токен недействителен (401 его уже стёр) или сервер недоступен — работаем как гость
+      })
+      .finally(() => setReady(true))
+  }, [])
 
   const favorites = user ? user.favorites : guestFavs
 
   const startSession = useCallback((u: User) => {
     // Избранное гостя переносим в аккаунт
-    const merged = Array.from(new Set([...u.favorites, ...readLS<string[]>(GUEST_FAVS_KEY, [])]))
-    if (merged.length !== u.favorites.length) api.saveFavoritesSync(u.id, merged)
+    const guest = readLS<string[]>(GUEST_FAVS_KEY, [])
+    const merged = Array.from(new Set([...u.favorites, ...guest]))
     writeLS(GUEST_FAVS_KEY, undefined)
     setGuestFavs([])
-    writeLS(SESSION_KEY, u.id)
-    const withFavs = { ...u, favorites: merged }
-    setUser(withFavs)
-    return withFavs
+    setUser({ ...u, favorites: merged })
+    if (merged.length !== u.favorites.length) {
+      api.saveFavorites(merged).then(setUser, () => toast.error("Не удалось перенести избранное в аккаунт"))
+    }
+    return u
   }, [])
 
   const login = useCallback(
@@ -77,26 +95,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
-    writeLS(SESSION_KEY, undefined)
     setUser(null)
+    api.logout().catch(() => {
+      // токен уже стёрт локально; если сервер недоступен, сессия истечёт сама
+    })
     toast("Вы вышли из аккаунта. Возвращайтесь 🐾")
   }, [])
 
-  const updateProfile = useCallback(
-    async (patch: Partial<Omit<User, "id" | "role">>) => {
-      if (!user) return
-      setUser(await api.updateUser(user.id, patch))
-    },
-    [user],
-  )
+  const updateProfile = useCallback(async (patch: Partial<Omit<User, "id" | "role" | "favorites">>) => {
+    setUser(await api.updateProfile(patch))
+  }, [])
 
   const toggleFavorite = useCallback(
     (petId: string, petName?: string) => {
       const has = favorites.includes(petId)
       const next = has ? favorites.filter((id) => id !== petId) : [...favorites, petId]
       if (user) {
-        api.saveFavoritesSync(user.id, next)
+        // Оптимистично: сердечко меняется сразу, при ошибке сервера откатываем
+        const prev = user
         setUser({ ...user, favorites: next })
+        api.saveFavorites(next).then(setUser, (e: Error) => {
+          setUser(prev)
+          toast.error(e.message)
+        })
       } else {
         writeLS(GUEST_FAVS_KEY, next)
         setGuestFavs(next)
@@ -109,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      ready,
       login,
       register,
       logout,
@@ -118,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       can: (action) => !!user && permissions[user.role].includes(action),
     }),
-    [user, login, register, logout, updateProfile, favorites, toggleFavorite],
+    [user, ready, login, register, logout, updateProfile, favorites, toggleFavorite],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

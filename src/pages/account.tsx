@@ -40,11 +40,15 @@ const tabs = [
 
 function Applications() {
   const { user } = useAuth()
-  const apps = useAsync(() => api.listApplications({ userId: user!.id, email: user!.email }), [user!.id])
-  const pets = useAsync(() => api.listAllPets(), [])
+  // Заявки и питомцы из них — одним запросом за другим: список всех питомцев доступен только персоналу
+  const apps = useAsync(async () => {
+    const list = await api.listApplications()
+    const pets = await api.getPetsByIds([...new Set(list.map((a) => a.petId))])
+    return { list, pets }
+  }, [user!.id])
 
   if (apps.status === "error") return <ErrorState onRetry={apps.reload} />
-  if (apps.status === "loading" || pets.status === "loading")
+  if (apps.status === "loading")
     return (
       <div className="flex flex-col gap-4">
         {[0, 1].map((i) => (
@@ -52,7 +56,7 @@ function Applications() {
         ))}
       </div>
     )
-  if (apps.data.length === 0)
+  if (apps.data.list.length === 0)
     return (
       <EmptyState
         title="Заявок пока нет"
@@ -67,14 +71,14 @@ function Applications() {
 
   async function cancel(id: string) {
     await api.cancelApplication(id)
-    apps.setData((list) => list.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a)))
+    apps.setData((d) => ({ ...d, list: d.list.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a)) }))
     toast("Заявка отозвана. Если передумаете — просто оставьте новую.")
   }
 
   return (
     <ul className="flex flex-col gap-4">
-      {apps.data.map((a) => {
-        const pet = pets.data?.find((p) => p.id === a.petId)
+      {apps.data.list.map((a) => {
+        const pet = apps.data.pets.find((p) => p.id === a.petId)
         const lastComment = a.staffComments.at(-1)
         return (
           <li key={a.id} className="flex flex-col gap-4 rounded-2xl bg-card p-4 ring-1 ring-foreground/5 sm:flex-row md:p-6">

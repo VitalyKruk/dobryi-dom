@@ -41,7 +41,7 @@ function Details({
   pet?: Pet
   onUpdate: (a: Application) => void
 }) {
-  const { user, can } = useAuth()
+  const { can } = useAuth()
   const [comment, setComment] = useState("")
   const [busy, setBusy] = useState(false)
 
@@ -59,7 +59,7 @@ function Details({
     if (!comment.trim()) return
     setBusy(true)
     try {
-      onUpdate(await api.addStaffComment(app.id, user!.name, comment.trim()))
+      onUpdate(await api.addStaffComment(app.id, comment.trim()))
       setComment("")
     } finally {
       setBusy(false) // ошибку покажет общий обработчик в App.tsx

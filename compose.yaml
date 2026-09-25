@@ -1,13 +1,26 @@
 services:
-  # Продакшн-сборка: nginx со статикой — http://localhost:8081 (порт меняется через WEB_PORT)
+  # Продакшн: nginx со статикой — http://localhost:8081 (порт меняется через WEB_PORT)
   web:
     build: .
     image: dobryi-dom:latest
     ports:
       - "${WEB_PORT:-8081}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
-  # Разработка с hot reload — http://localhost:5173
+  # API: Node + Express, данные (db.json и фото) — в томе api-data
+  api:
+    build:
+      context: .
+      target: api
+    image: dobryi-dom-api:latest
+    volumes:
+      - api-data:/data
+    restart: unless-stopped
+
+  # Разработка с hot reload: Vite + API в одном контейнере — http://localhost:5173
   # Запуск: docker compose --profile dev up dev
   dev:
     profiles: ["dev"]
@@ -25,3 +38,4 @@ services:
 
 volumes:
   node_modules:
+  api-data:

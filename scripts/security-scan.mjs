@@ -10,7 +10,7 @@
  * Проверки:
  *   1. npm audit          — известные уязвимости в npm-зависимостях (high и critical)
  *   2. trivy fs           — уязвимости в package-lock.json, секреты в коде, ошибки в Dockerfile/compose
- *   3. trivy image        — уязвимости ОС и пакетов в собранном образе dobryi-dom:latest
+ *   3. trivy image        — уязвимости ОС и пакетов в образах dobryi-dom (сайт) и dobryi-dom-api (API)
  *
  * Trivy запускается в Docker, ставить его не нужно. Отчёты — в .security/.
  * Код выхода 1, если хоть одна проверка нашла проблемы уровня HIGH или CRITICAL.
@@ -23,7 +23,7 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dirname, "..")
 const OUT = path.join(ROOT, ".security")
 const TRIVY = "aquasec/trivy:0.74.0"
-const IMAGE = "dobryi-dom:latest"
+const IMAGES = ["dobryi-dom:latest", "dobryi-dom-api:latest"]
 const SEVERITY = "HIGH,CRITICAL"
 const STAMP = path.join(OUT, "last-success")
 
@@ -144,6 +144,7 @@ step("trivy fs — lock-файл, секреты, Dockerfile и compose", () => 
     "--skip-dirs", "node_modules",
     "--skip-dirs", "dist",
     "--skip-dirs", ".security",
+    "--skip-dirs", "data",
     "--exit-code", "1",
     "--quiet",
     "/src",
@@ -152,7 +153,7 @@ step("trivy fs — lock-файл, секреты, Dockerfile и compose", () => 
 })
 
 // 3. trivy image
-step(`trivy image — образ ${IMAGE}`, () => {
+step(`trivy image — образы ${IMAGES.join(", ")}`, () => {
   if (quick) {
     console.log(yellow("  --quick: образ не собираю и не сканирую."))
     return "skip"
@@ -161,20 +162,25 @@ step(`trivy image — образ ${IMAGE}`, () => {
     console.log(yellow("  Docker не запущен — пропускаю."))
     return "skip"
   }
-  console.log("  Собираю образ…")
-  const build = run("docker", ["compose", "build", "--quiet", "web"])
+  console.log("  Собираю образы…")
+  const build = run("docker", ["compose", "build", "--quiet", "web", "api"])
   if (build.status !== 0) return "error"
-  const r = run("docker", [
-    ...trivyBase,
-    "-v", "/var/run/docker.sock:/var/run/docker.sock",
-    TRIVY, "image",
-    "--severity", SEVERITY,
-    "--ignore-unfixed",
-    "--exit-code", "1",
-    "--quiet",
-    IMAGE,
-  ])
-  return r.status === 0 ? "pass" : "fail"
+  let failed = false
+  for (const image of IMAGES) {
+    console.log(`  Сканирую ${image}…`)
+    const r = run("docker", [
+      ...trivyBase,
+      "-v", "/var/run/docker.sock:/var/run/docker.sock",
+      TRIVY, "image",
+      "--severity", SEVERITY,
+      "--ignore-unfixed",
+      "--exit-code", "1",
+      "--quiet",
+      image,
+    ])
+    if (r.status !== 0) failed = true
+  }
+  return failed ? "fail" : "pass"
 })
 
 // Итог

@@ -28,6 +28,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build # включает tsc -b
+      - run: npm run test:api # интеграционные тесты API (node:test)
 
   docker:
     name: Образ Docker
@@ -41,7 +42,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
-      - name: Теги образа
+      - name: Теги образа сайта
         id: meta
         uses: docker/metadata-action@v6
         with:
@@ -54,35 +55,61 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Сборка образа
+      - name: Теги образа API
+        id: meta-api
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}-api
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Имена совпадают с compose.yaml — стек поднимается из только что собранных образов
+      - name: Сборка образа сайта
         uses: docker/build-push-action@v7
         with:
           context: .
           load: true
-          tags: dobryi-dom:ci
+          tags: dobryi-dom:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke-тест контейнера
+      - name: Сборка образа API
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: api
+          load: true
+          tags: dobryi-dom-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Smoke-тест стека (nginx → API)
         run: |
-          docker run -d --name app -p 8080:8080 dobryi-dom:ci
-          for i in $(seq 1 20); do
-            curl -fs http://localhost:8080/healthz && break
-            sleep 1
-          done
-          curl -fs http://localhost:8080/healthz | grep -q ok
+          docker compose up -d --no-build --wait web api
+          B=http://localhost:8081
+          curl -fs $B/healthz | grep -q ok
           # SPA-fallback: прямые ссылки должны отдавать index.html
           for path in / /catalog /pet/persik /admin/pets; do
-            curl -fs "http://localhost:8080$path" | grep -q '<div id="root">' || { echo "FAIL $path"; exit 1; }
+            curl -fs "$B$path" | grep -q '<div id="root">' || { echo "FAIL $path"; exit 1; }
           done
           # Хешированные ассеты кешируются надолго
-          asset=$(curl -fs http://localhost:8080/ | grep -o '/assets/[^"]*\.js' | head -1)
-          curl -fsI "http://localhost:8080$asset" | grep -qi 'cache-control: public, immutable'
-          docker inspect --format '{{.State.Health.Status}}' app
+          asset=$(curl -fs $B/ | grep -o '/assets/[^"]*.js' | head -1)
+          curl -fsI "$B$asset" | grep -qi 'cache-control: public, immutable'
+          # API через nginx: данные, валидация, права, сохранение
+          curl -fs "$B/api/pets?species=cat" | grep -q '"total"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/applications -H 'content-type: application/json' -d '{}')" = 400
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/uploads -H 'content-type: image/png' --data-binary x)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/applications -H 'content-type: application/json'             -d '{"petId":"bublik","name":"CI Test","phone":"+7 (900) 000-00-00","email":"ci@example.com","city":"SPb","housing":"house","hasOtherPets":false,"experience":"some","preferredTime":"weekend"}')" = 201
+          docker compose exec -T api grep -q ci@example.com /data/db.json
 
-      - name: Логи контейнера
+      - name: Логи контейнеров
         if: failure()
-        run: docker logs app
+        run: docker compose logs web api
 
       - name: Вход в GHCR
         if: github.event_name != 'pull_request'
@@ -92,7 +119,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Публикация образа
+      - name: Публикация образа сайта
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
         with:
@@ -101,3 +128,14 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
+
+      - name: Публикация образа API
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: api
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha,scope=api

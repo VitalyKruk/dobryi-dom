@@ -41,7 +41,7 @@ function VolunteerForm() {
   })
   const e = formState.errors
   const onSubmit = handleSubmit(async (v) => {
-    await api.sendVolunteerRequest({ ...v, at: new Date().toISOString() })
+    await api.sendVolunteerRequest(v)
     reset()
     toast.success("Спасибо! Координатор позвонит в течение недели и пригласит на знакомство 🐾")
   })

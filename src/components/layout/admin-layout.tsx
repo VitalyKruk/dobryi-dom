@@ -68,8 +68,8 @@ function SideNav({ pending }: { pending: number | null }) {
         <Button
           variant="ghost"
           className="justify-start text-secondary-foreground"
-          onClick={() => {
-            api.resetDemoData()
+          onClick={async () => {
+            await api.resetDemoData()
             toast.success("Демо-данные восстановлены")
             setTimeout(() => window.location.reload(), 400)
           }}
