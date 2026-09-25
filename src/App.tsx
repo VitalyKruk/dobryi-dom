@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { ApiError } from "@/lib/api"
 import HomePage from "@/pages/home"
 import CatalogPage from "@/pages/catalog"
+import MatchPage from "@/pages/match"
 import PetPage from "@/pages/pet"
 import ApplyPage from "@/pages/apply"
 import AboutPage from "@/pages/about"
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: "catalog", element: <CatalogPage /> },
+          { path: "match", element: <MatchPage /> },
           { path: "pet/:id", element: <PetPage /> },
           { path: "apply/:petId", element: <ApplyPage /> },
           { path: "about", element: <AboutPage /> },

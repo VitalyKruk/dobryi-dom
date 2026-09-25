@@ -26,6 +26,7 @@ import { PageHeader } from "@/components/page-header"
 import { ApplicationStatusBadge, PetCard, PetCardSkeleton, PetImage } from "@/components/pet"
 import { EmptyState, ErrorState } from "@/components/states"
 import { useAuth } from "@/context/auth"
+import { MatchFinder } from "@/components/match"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
 import { formatDate, formatPhone, visitTimeLabel } from "@/lib/format"
@@ -33,6 +34,7 @@ import type { NotifySettings } from "@/lib/types"
 
 const tabs = [
   { value: "applications", label: "Мои заявки" },
+  { value: "match", label: "Подходят вам" },
   { value: "favorites", label: "Избранное" },
   { value: "profile", label: "Профиль" },
   { value: "notifications", label: "Уведомления" },
@@ -289,6 +291,9 @@ export default function AccountPage() {
           </div>
           <TabsContent value="applications">
             <Applications />
+          </TabsContent>
+          <TabsContent value="match">
+            <MatchFinder />
           </TabsContent>
           <TabsContent value="favorites">
             <FavoritesGrid />

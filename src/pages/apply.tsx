@@ -16,12 +16,14 @@ import { Field, FieldSet } from "@/components/field"
 import { HappyHeart } from "@/components/illustrations"
 import { Crumbs } from "@/components/page-header"
 import { PetImage, PetStatusBadge, petMeta } from "@/components/pet"
+import { MatchGrid } from "@/components/match"
 import { ErrorState } from "@/components/states"
 import { useAuth } from "@/context/auth"
 import { useAsync } from "@/hooks/use-async"
 import { readLS, writeLS } from "@/hooks/use-local-storage"
 import * as api from "@/lib/api"
 import { experienceLabel, formatPhone, housingLabel, visitTimeLabel } from "@/lib/format"
+import { profileFromApplication } from "@/lib/match"
 import type { Application, Pet } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import NotFoundPage from "./not-found"
@@ -33,6 +35,7 @@ const schema = z
     email: z.email({ error: "Проверьте адрес — похоже, в нём опечатка" }),
     city: z.string().trim().min(2, { error: "Укажите город — так мы поймём, удобно ли вам приехать" }),
     housing: z.enum(["apartment", "house", "other"], { error: "Выберите тип жилья" }),
+    hasKids: z.enum(["yes", "no"], { error: "Подскажите, есть ли в семье дети до 10 лет" }),
     hasOtherPets: z.enum(["yes", "no"], { error: "Подскажите, есть ли дома другие животные" }),
     otherPetsNote: z.string().trim().max(300).optional(),
     experience: z.enum(["none", "some", "experienced"], { error: "Выберите вариант — любой ответ подходит" }),
@@ -49,7 +52,7 @@ type FormValues = z.input<typeof schema>
 
 const steps: { title: string; fields: (keyof FormValues)[] }[] = [
   { title: "О себе", fields: ["name", "phone", "email", "city"] },
-  { title: "Жильё и опыт", fields: ["housing", "hasOtherPets", "otherPetsNote", "experience"] },
+  { title: "Жильё и опыт", fields: ["housing", "hasKids", "hasOtherPets", "otherPetsNote", "experience"] },
   { title: "Пожелания", fields: ["preferredTime", "comment"] },
   { title: "Проверка", fields: ["consent"] },
 ]
@@ -170,6 +173,35 @@ function Success({ app, pet }: { app: Application; pet: Pet }) {
           <Link to="/catalog">Вернуться в каталог</Link>
         </Button>
       </div>
+      <AlsoMatches app={app} />
+    </section>
+  )
+}
+
+/** «Кому ещё у вас будет хорошо» — подбор по ответам только что отправленной анкеты */
+function AlsoMatches({ app }: { app: Application }) {
+  const data = useAsync(() => {
+    const pr = profileFromApplication(app)
+    return api.getRecommendations({
+      housing: pr.housing,
+      kids: pr.hasKids,
+      other: pr.otherPets,
+      experience: pr.experience,
+      exclude: [app.petId],
+      limit: 3,
+    })
+  }, [app.id])
+  // Подборка — приятный бонус: при ошибке или пустом ответе просто не показываем блок
+  if (data.status === "error" || (data.status === "success" && data.data.items.length === 0)) return null
+  return (
+    <section className="mt-8 flex w-full flex-col gap-6 text-left" aria-labelledby="also-title">
+      <div className="flex flex-col gap-2">
+        <h2 id="also-title" className="text-2xl leading-8">
+          Кому ещё у вас будет хорошо
+        </h2>
+        <p className="text-muted-foreground">Подобрали по вашей анкете: жильё, дети, другие животные и опыт.</p>
+      </div>
+      <MatchGrid items={data.data?.items} loading={data.status === "loading"} />
     </section>
   )
 }
@@ -191,6 +223,7 @@ function Summary({ values, onEdit }: { values: FormValues; onEdit: (step: number
       title: "Жильё и опыт",
       rows: [
         ["Жильё", values.housing && housingLabel[values.housing]],
+        ["Дети до 10 лет", values.hasKids && (values.hasKids === "yes" ? "Есть" : "Нет")],
         ["Другие животные", values.hasOtherPets === "yes" ? values.otherPetsNote || "Да" : "Нет"],
         ["Опыт", values.experience && experienceLabel[values.experience]],
       ],
@@ -287,6 +320,7 @@ function ApplyForm({ pet }: { pet: Pet }) {
         email: v.email.trim(),
         city: v.city.trim(),
         housing: v.housing,
+        hasKids: v.hasKids === "yes",
         hasOtherPets: v.hasOtherPets === "yes",
         otherPetsNote: v.hasOtherPets === "yes" ? v.otherPetsNote : undefined,
         experience: v.experience,
@@ -379,6 +413,25 @@ function ApplyForm({ pet }: { pet: Pet }) {
                           { value: "apartment", label: "Квартира" },
                           { value: "house", label: "Частный дом" },
                           { value: "other", label: "Другое" },
+                        ]}
+                      />
+                    )}
+                  />
+                </FieldSet>
+                <FieldSet legend="Есть ли в семье дети до 10 лет? *" error={errors.hasKids?.message}>
+                  <Controller
+                    control={control}
+                    name="hasKids"
+                    render={({ field }) => (
+                      <ChoiceCards
+                        name="kids"
+                        columns={2}
+                        value={field.value}
+                        onChange={field.onChange}
+                        invalid={!!errors.hasKids}
+                        options={[
+                          { value: "no", label: "Нет" },
+                          { value: "yes", label: "Есть" },
                         ]}
                       />
                     )}

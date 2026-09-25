@@ -22,13 +22,15 @@ type Seed = Omit<Pet, "photos" | "birthDate" | "addedAt" | "vaccinated" | "steri
   focus: Focus
   months: number
   added: number
+  /** уехал домой N дней назад */
+  adopted?: number
   vaccinated?: boolean
   sterilized?: boolean
   chipped?: boolean
 }
 
 function pet(s: Seed): Pet {
-  const { photo: id, focus, months, added, ...rest } = s
+  const { photo: id, focus, months, added, adopted, ...rest } = s
   return {
     vaccinated: true,
     sterilized: true,
@@ -38,6 +40,7 @@ function pet(s: Seed): Pet {
     photos: [photo(id, focus), photo(id, focus, 1.8)],
     birthDate: bornMonthsAgo(months),
     addedAt: daysAgo(added),
+    ...(adopted !== undefined && { adoptedAt: daysAgo(adopted) }),
   }
 }
 
@@ -245,32 +248,32 @@ export const seedPets: Pet[] = [
   pet({
     id: "leva", name: "Лёва", species: "cat", sex: "male", months: 30, breed: "Беспородный", size: "medium", coat: "short", weightKg: 5,
     photo: "1543852786-1cf6624b9987", focus: [0.45, 0.3, 1], traits: ["Весёлый"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Лёва уехал домой к семье Кравцовых.", careNotes: "", status: "adopted", added: 90,
+    story: "Лёва уехал домой к семье Кравцовых.", careNotes: "", status: "adopted", added: 90, adopted: 18,
   }),
   pet({
     id: "sonya", name: "Соня", species: "cat", sex: "female", months: 20, breed: "Беспородная", size: "medium", coat: "short", weightKg: 3.8,
     photo: "1541781774459-bb2af2f05b55", focus: [0.47, 0.55, 1.6], traits: ["Соня"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "unknown",
-    story: "Соня нашла дом весной.", careNotes: "", status: "adopted", added: 150,
+    story: "Соня нашла дом и теперь спит на подоконнике с видом на парк.", careNotes: "", status: "adopted", added: 150, adopted: 58,
   }),
   pet({
     id: "charli", name: "Чарли", species: "dog", sex: "male", months: 40, breed: "Йоркширский терьер (метис)", size: "small", coat: "long", weightKg: 4,
     photo: "1548199973-03cce0bbc87b", focus: [0.6, 0.38, 1.3], traits: ["Весёлый"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Чарли уехал домой вместе с лучшей подругой.", careNotes: "", status: "adopted", added: 200,
+    story: "Чарли уехал домой вместе с лучшей подругой.", careNotes: "", status: "adopted", added: 200, adopted: 86,
   }),
   pet({
     id: "nika", name: "Ника", species: "dog", sex: "female", months: 8, breed: "Ретривер (метис)", size: "large", coat: "long", weightKg: 14,
     photo: "1576201836106-db1758fd1c97", focus: [0.55, 0.5, 2], traits: ["Игривая"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Ника теперь живёт в загородном доме.", careNotes: "", status: "adopted", added: 100,
+    story: "Ника теперь живёт в загородном доме.", careNotes: "", status: "adopted", added: 100, adopted: 31,
   }),
   pet({
     id: "bonya", name: "Боня", species: "dog", sex: "female", months: 34, breed: "Французский бульдог", size: "small", coat: "short", weightKg: 11,
     photo: "1583337130417-3346a1be7dee", focus: [0.62, 0.45, 1], traits: ["Модница"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Боня уехала домой в новом жёлтом худи.", careNotes: "", status: "adopted", added: 130,
+    story: "Боня уехала домой в новом жёлтом худи.", careNotes: "", status: "adopted", added: 130, adopted: 44,
   }),
   pet({
     id: "keks", name: "Кекс", species: "dog", sex: "male", months: 18, breed: "Французский бульдог", size: "small", coat: "short", weightKg: 12,
     photo: "1598133894008-61f7fdb8cc3a", focus: [0.42, 0.6, 1.1], traits: ["Дружелюбный"], goodWithKids: "yes", goodWithCats: "unknown", goodWithDogs: "yes",
-    story: "Кекс нашёл дом летом.", careNotes: "", status: "adopted", added: 160,
+    story: "Кекс нашёл дом и лучшего друга — восьмилетнего Тёму.", careNotes: "", status: "adopted", added: 160, adopted: 71,
   }),
 ]
 
@@ -294,51 +297,52 @@ export const seedUsers: User[] = [
   },
 ]
 
-export const seedApplications: Application[] = [
+/** Свежие заявки за последние две недели; номера A-… раздаёт seed-history.ts по дате поступления */
+export const seedApplications: Omit<Application, "id">[] = [
   {
-    id: "A-1042", petId: "richi", userId: "u-anna", name: "Анна Смирнова", phone: "+7 (921) 555-12-34", email: "anna@example.com", city: "Санкт-Петербург",
-    housing: "house", hasOtherPets: false, experience: "some", comment: "Живём за городом, рядом озеро — Ричи понравится!", preferredTime: "weekend",
+    petId: "richi", userId: "u-anna", name: "Анна Смирнова", phone: "+7 (921) 555-12-34", email: "anna@example.com", city: "Санкт-Петербург",
+    housing: "house", hasKids: true, hasOtherPets: false, experience: "some", comment: "Живём за городом, рядом озеро — Ричи понравится!", preferredTime: "weekend",
     status: "pending", staffComments: [], createdAt: daysAgo(1),
   },
   {
-    id: "A-1031", petId: "vasilisa", userId: "u-anna", name: "Анна Смирнова", phone: "+7 (921) 555-12-34", email: "anna@example.com", city: "Санкт-Петербург",
-    housing: "house", hasOtherPets: false, experience: "some", preferredTime: "weekday-evening",
-    status: "approved", staffComments: [{ author: "Ольга Васильева", text: "Ждём вас в субботу в 12:00, возьмите переноску 🙂", at: daysAgo(3) }], createdAt: daysAgo(6),
+    petId: "vasilisa", userId: "u-anna", name: "Анна Смирнова", phone: "+7 (921) 555-12-34", email: "anna@example.com", city: "Санкт-Петербург",
+    housing: "house", hasKids: true, hasOtherPets: false, experience: "some", preferredTime: "weekday-evening",
+    status: "approved", staffComments: [{ author: "Ольга Васильева", text: "Ждём вас в субботу в 12:00, возьмите переноску 🙂", at: daysAgo(3) }], createdAt: daysAgo(6), decidedAt: daysAgo(3),
   },
   {
-    id: "A-1044", petId: "bublik", name: "Дмитрий Орлов", phone: "+7 (912) 345-67-89", email: "orlov@example.com", city: "Санкт-Петербург",
-    housing: "apartment", hasOtherPets: true, otherPetsNote: "Кошка 5 лет, спокойная", experience: "experienced", preferredTime: "weekend",
+    petId: "bublik", name: "Дмитрий Орлов", phone: "+7 (912) 345-67-89", email: "orlov@example.com", city: "Санкт-Петербург",
+    housing: "apartment", hasKids: false, hasOtherPets: true, otherPetsNote: "Кошка 5 лет, спокойная", experience: "experienced", preferredTime: "weekend",
     status: "pending", staffComments: [], createdAt: daysAgo(0.3),
   },
   {
-    id: "A-1043", petId: "mandarin", name: "Екатерина Лебедева", phone: "+7 (905) 111-00-22", email: "kate.l@example.com", city: "Пушкин",
-    housing: "apartment", hasOtherPets: false, experience: "none", comment: "Давно мечтаем о рыжем коте!", preferredTime: "weekday-evening",
+    petId: "mandarin", name: "Екатерина Лебедева", phone: "+7 (905) 111-00-22", email: "kate.l@example.com", city: "Пушкин",
+    housing: "apartment", hasKids: true, hasOtherPets: false, experience: "none", comment: "Давно мечтаем о рыжем коте!", preferredTime: "weekday-evening",
     status: "pending", staffComments: [{ author: "Иван Петров", text: "Позвонил, договорились на четверг.", at: daysAgo(0.5) }], createdAt: daysAgo(2),
   },
   {
-    id: "A-1038", petId: "alma", name: "Сергей Никитин", phone: "+7 (931) 765-43-21", email: "nikitin@example.com", city: "Санкт-Петербург",
-    housing: "house", hasOtherPets: true, otherPetsNote: "Лабрадор 3 года", experience: "experienced", preferredTime: "weekend",
-    status: "approved", staffComments: [], createdAt: daysAgo(5),
+    petId: "alma", name: "Сергей Никитин", phone: "+7 (931) 765-43-21", email: "nikitin@example.com", city: "Санкт-Петербург",
+    housing: "house", hasKids: true, hasOtherPets: true, otherPetsNote: "Лабрадор 3 года", experience: "experienced", preferredTime: "weekend",
+    status: "approved", staffComments: [], createdAt: daysAgo(5), decidedAt: daysAgo(3.5),
   },
   {
-    id: "A-1036", petId: "baron", name: "Мария Козлова", phone: "+7 (921) 000-11-22", email: "kozlova@example.com", city: "Колпино",
-    housing: "apartment", hasOtherPets: false, experience: "some", preferredTime: "weekday-morning",
-    status: "approved", staffComments: [], createdAt: daysAgo(8),
+    petId: "baron", name: "Мария Козлова", phone: "+7 (921) 000-11-22", email: "kozlova@example.com", city: "Колпино",
+    housing: "apartment", hasKids: false, hasOtherPets: false, experience: "some", preferredTime: "weekday-morning",
+    status: "approved", staffComments: [], createdAt: daysAgo(8), decidedAt: daysAgo(6),
   },
   {
-    id: "A-1029", petId: "laki", name: "Павел Громов", phone: "+7 (999) 888-77-66", email: "gromov@example.com", city: "Санкт-Петербург",
-    housing: "apartment", hasOtherPets: true, otherPetsNote: "Две кошки", experience: "some", preferredTime: "weekend",
-    status: "rejected", staffComments: [{ author: "Ольга Васильева", text: "Лаки не ладит с кошками — предложили посмотреть Тошу.", at: daysAgo(9) }], createdAt: daysAgo(12),
+    petId: "laki", name: "Павел Громов", phone: "+7 (999) 888-77-66", email: "gromov@example.com", city: "Санкт-Петербург",
+    housing: "apartment", hasKids: false, hasOtherPets: true, otherPetsNote: "Две кошки", experience: "some", preferredTime: "weekend",
+    status: "rejected", staffComments: [{ author: "Ольга Васильева", text: "Лаки не ладит с кошками — предложили посмотреть Тошу.", at: daysAgo(9) }], createdAt: daysAgo(12), decidedAt: daysAgo(9),
   },
   {
-    id: "A-1045", petId: "sanni", name: "Ирина Фёдорова", phone: "+7 (904) 222-11-00", email: "irina.f@example.com", city: "Гатчина",
-    housing: "house", hasOtherPets: false, experience: "some", comment: "Есть большой огороженный участок.", preferredTime: "weekend",
+    petId: "sanni", name: "Ирина Фёдорова", phone: "+7 (904) 222-11-00", email: "irina.f@example.com", city: "Гатчина",
+    housing: "house", hasKids: true, hasOtherPets: false, experience: "some", comment: "Есть большой огороженный участок.", preferredTime: "weekend",
     status: "pending", staffComments: [], createdAt: daysAgo(0.1),
   },
   {
-    id: "A-1040", petId: "baddi", name: "Алексей Морозов", phone: "+7 (911) 999-00-11", email: "morozov@example.com", city: "Санкт-Петербург",
-    housing: "apartment", hasOtherPets: false, experience: "none", preferredTime: "weekday-evening",
-    status: "approved", staffComments: [], createdAt: daysAgo(4),
+    petId: "baddi", name: "Алексей Морозов", phone: "+7 (911) 999-00-11", email: "morozov@example.com", city: "Санкт-Петербург",
+    housing: "apartment", hasKids: false, hasOtherPets: false, experience: "none", preferredTime: "weekday-evening",
+    status: "approved", staffComments: [], createdAt: daysAgo(4), decidedAt: daysAgo(2),
   },
 ]
 

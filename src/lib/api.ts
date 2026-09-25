@@ -4,13 +4,16 @@
  */
 import { demoMode } from "./demo"
 import { filtersToQuery } from "./pets-query"
+import type { Match, MatchProfile } from "./match"
 import type {
+  Analytics,
   Application,
   ApplicationStatus,
   Pet,
   PetFilters,
   PetStatus,
   Role,
+  Species,
   User,
   Volunteer,
 } from "./types"
@@ -124,6 +127,33 @@ export type Stats = {
   volunteers: number
 }
 export const getStats = () => get<Stats>("/stats")
+export const getAnalytics = () => get<Analytics>("/admin/analytics")
+
+// ——— Подбор «Подходят вам» ———
+
+export type MatchQuery = {
+  housing?: Application["housing"]
+  kids?: boolean
+  /** кто уже живёт дома; пустой массив — никого */
+  other?: Species[]
+  experience?: Application["experience"]
+  species?: Species[]
+  exclude?: string[]
+  limit?: number
+}
+
+/** Без параметров — по последней анкете и избранному вошедшего пользователя */
+export function getRecommendations(q: MatchQuery = {}) {
+  const p = new URLSearchParams()
+  if (q.housing) p.set("housing", q.housing)
+  if (q.kids !== undefined) p.set("kids", q.kids ? "yes" : "no")
+  if (q.other) p.set("other", q.other.length ? q.other.join(",") : "none")
+  if (q.experience) p.set("experience", q.experience)
+  if (q.species?.length) p.set("species", q.species.join(","))
+  if (q.exclude?.length) p.set("exclude", q.exclude.join(","))
+  if (q.limit) p.set("limit", String(q.limit))
+  return get<{ basedOn: string[]; profile: MatchProfile; items: Match[] }>(`/recommendations?${p}`)
+}
 
 // ——— Админка: питомцы ———
 

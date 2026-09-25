@@ -7,8 +7,10 @@ import { writeFile } from "node:fs/promises"
 import path from "node:path"
 import express, { type Request } from "express"
 import { ADOPTED_BEFORE_SITE } from "../src/lib/seed.ts"
+import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "../src/lib/match.ts"
 import { featuredPets, filtersFromQuery, matchesFilters, similarPets, sortPets } from "../src/lib/pets-query.ts"
-import type { Application, Pet, User } from "../src/lib/types.ts"
+import type { Application, Pet, Species, User } from "../src/lib/types.ts"
+import { buildAnalytics } from "./analytics.ts"
 import { authenticate, can, hashPassword, hashToken, newToken, requirePermission, requireUser, verifyPassword } from "./auth.ts"
 import { errorHandler, HttpError, parse } from "./errors.ts"
 import * as s from "./schemas.ts"
@@ -130,7 +132,9 @@ export function createApp(store: Store) {
     const pet = await store.write((d) => {
       const i = d.pets.findIndex((p) => p.id === req.params.id)
       if (i < 0) throw new HttpError(404, "Питомец не найден")
-      d.pets[i] = { ...input, id: d.pets[i].id, addedAt: d.pets[i].addedAt }
+      const prev = d.pets[i]
+      d.pets[i] = { ...input, id: prev.id, addedAt: prev.addedAt }
+      if (input.status === "adopted") d.pets[i].adoptedAt = prev.adoptedAt ?? now()
       return d.pets[i]
     })
     res.json(pet)
@@ -142,6 +146,8 @@ export function createApp(store: Store) {
     const pet = await store.write((d) => {
       const p = d.pets.find((x) => x.id === req.params.id)
       if (!p) throw new HttpError(404, "Питомец не найден")
+      if (status === "adopted" && p.status !== "adopted") p.adoptedAt = now()
+      if (status !== "adopted") delete p.adoptedAt
       p.status = status
       return p
     })
@@ -215,6 +221,56 @@ export function createApp(store: Store) {
     })
   })
 
+  /** Дашборд: динамика, воронка, причины отказов и подсказки команде */
+  app.get("/api/admin/analytics", (req, res) => {
+    requirePermission(req, "applications.view")
+    const empty = demoEmpty(req)
+    res.json(buildAnalytics(empty ? [] : db().pets, empty ? [] : db().applications))
+  })
+
+  // ——— Подбор «Подходят вам» ———
+  // Профиль берётся из параметров (?housing=house&kids=yes&other=cat&experience=none&species=dog)
+  // или, если их нет, из последней заявки и избранного вошедшего пользователя.
+
+  app.get("/api/recommendations", (req, res) => {
+    const q = parse(s.recommendationsQuerySchema, req.query)
+    const user = req.user
+    const own = user
+      ? db()
+          .applications.filter((a) => a.userId === user.id || a.email.toLowerCase() === user.email.toLowerCase())
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      : []
+    const favPets = user ? db().pets.filter((p) => user.favorites.includes(p.id)) : []
+
+    const explicit: MatchProfile = {
+      housing: q.housing,
+      hasKids: q.kids === undefined ? undefined : q.kids === "yes",
+      otherPets: q.other?.filter((x): x is Species => x !== "none"),
+      experience: q.experience,
+      species: q.species as Species[] | undefined,
+    }
+    const basedOn: string[] = []
+    let profile = explicit
+    if (isEmptyProfile(explicit)) {
+      profile = own[0] ? profileFromApplication(own[0]) : {}
+      if (own[0]) basedOn.push(`анкете ${own[0].id}`)
+    } else basedOn.push("вашим ответам")
+    // Вид и размер — из избранного, если человек не выбрал их явно
+    if (!explicit.species?.length && favPets.length) {
+      profile = { ...profile, ...profileFromFavorites(favPets) }
+      basedOn.push("избранному")
+    }
+
+    // Тех, на кого уже есть заявка или кто в избранном, не предлагаем — их человек и так знает
+    const exclude = [...(q.exclude ?? []), ...own.map((a) => a.petId), ...favPets.map((p) => p.id)]
+    const items = demoEmpty(req) || isEmptyProfile(profile) ? [] : matchPets(db().pets, profile, { limit: q.limit, exclude })
+    res.json({
+      basedOn,
+      profile,
+      items: items.map((m) => ({ ...m, pet: publicPet(m.pet, user) })),
+    })
+  })
+
   // ——— Заявки ———
 
   app.post("/api/applications", async (req, res) => {
@@ -262,6 +318,8 @@ export function createApp(store: Store) {
       const app = d.applications.find((a) => a.id === req.params.id)
       if (!app) throw new HttpError(404, "Заявка не найдена")
       app.status = status
+      if (status === "pending") delete app.decidedAt
+      else app.decidedAt = now()
       // Бизнес-правило: одобрение бронирует питомца
       if (status === "approved") {
         const pet = d.pets.find((p) => p.id === app.petId)
@@ -281,6 +339,7 @@ export function createApp(store: Store) {
       if (!app || !own) throw new HttpError(404, "Заявка не найдена")
       if (app.status !== "pending") throw new HttpError(409, "Отозвать можно только заявку на рассмотрении")
       app.status = "cancelled"
+      app.decidedAt = now()
       return app
     })
     res.json(updated)
