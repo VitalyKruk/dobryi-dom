@@ -113,14 +113,60 @@ describe("заявки", () => {
     assert.equal(volunteer.status, 403)
     const admin = await api("PATCH", `/api/applications/${created.json.id}/status`, { status: "approved" }, await login("olga@dobryi-dom.ru"))
     assert.equal(admin.status, 200)
+    assert.ok(admin.json.decidedAt, "решение датируется — для аналитики")
     assert.equal((await api("GET", "/api/pets/sima")).json.status, "reserved")
   })
 
   test("отозвать можно только свою заявку", async () => {
     const anna = await login("anna@example.com")
-    assert.equal((await api("POST", "/api/applications/A-1042/cancel", undefined, anna)).json.status, "cancelled")
-    // A-1044 — чужая заявка (Дмитрий Орлов)
-    assert.equal((await api("POST", "/api/applications/A-1044/cancel", undefined, anna)).status, 404)
+    type App = { id: string; name: string; status: string; petId: string }
+    const own = (await api("GET", "/api/applications", undefined, anna)).json as App[]
+    const pending = own.find((x) => x.status === "pending")!
+    assert.equal((await api("POST", `/api/applications/${pending.id}/cancel`, undefined, anna)).json.status, "cancelled")
+    const all = (await api("GET", "/api/applications", undefined, await login("olga@dobryi-dom.ru"))).json as App[]
+    const foreign = all.find((x) => x.name === "Дмитрий Орлов")!
+    assert.equal((await api("POST", `/api/applications/${foreign.id}/cancel`, undefined, anna)).status, 404)
+    const decided = own.find((x) => x.status === "approved")!
+    assert.equal((await api("POST", `/api/applications/${decided.id}/cancel`, undefined, anna)).status, 409)
+  })
+})
+
+describe("аналитика и подбор", () => {
+  test("история заявок за три месяца, аналитика — только персоналу", async () => {
+    const olga = await login("olga@dobryi-dom.ru")
+    assert.ok((await api("GET", "/api/applications", undefined, olga)).json.length >= 60)
+    assert.equal((await api("GET", "/api/admin/analytics")).status, 401)
+    assert.equal((await api("GET", "/api/admin/analytics", undefined, await login("anna@example.com"))).status, 403)
+    const r = await api("GET", "/api/admin/analytics", undefined, await login("ivan@dobryi-dom.ru"))
+    assert.equal(r.status, 200)
+    assert.equal(r.json.weeks.length, 12)
+    const total = r.json.weeks.reduce((sum: number, w: { total: number }) => sum + w.total, 0)
+    assert.equal(total, r.json.totals.applications)
+    assert.ok(r.json.totals.adopted >= 1 && r.json.totals.avgDaysToHome > 0)
+    assert.ok(r.json.rejectReasons.length > 0 && r.json.insights.length > 0)
+  })
+
+  test("подбор по анкете: не предлагает тех, кто не ладит с детьми и кошками", async () => {
+    const r = await api("GET", "/api/recommendations?housing=apartment&kids=yes&other=cat&experience=none&limit=12")
+    assert.equal(r.status, 200)
+    assert.ok(r.json.items.length > 0)
+    for (const m of r.json.items) {
+      assert.notEqual(m.pet.goodWithKids, "no")
+      assert.notEqual(m.pet.goodWithCats, "no")
+      assert.equal(m.pet.status, "available")
+      assert.ok(m.score >= 35 && m.score <= 98 && Array.isArray(m.reasons))
+    }
+    assert.ok(r.json.items.every((m: { score: number }, i: number, a: { score: number }[]) => i === 0 || a[i - 1].score >= m.score))
+  })
+
+  test("подбор для вошедшего — по его анкете и избранному, без уже знакомых питомцев", async () => {
+    const anna = await login("anna@example.com")
+    const r = await api("GET", "/api/recommendations", undefined, anna)
+    assert.ok(r.json.basedOn.includes("избранному"))
+    const ids = r.json.items.map((m: { pet: { id: string } }) => m.pet.id)
+    for (const known of ["persik", "richi", "musya", "vasilisa"]) assert.ok(!ids.includes(known))
+    assert.equal((await api("GET", "/api/recommendations?kids=maybe")).status, 400)
+    assert.deepEqual((await api("GET", "/api/recommendations")).json.items, [], "гостю без анкеты подбирать не по чему")
   })
 })
 

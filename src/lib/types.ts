@@ -31,6 +31,8 @@ export type Pet = {
   internalNotes?: string
   status: PetStatus
   addedAt: string
+  /** когда уехал домой — ставит сервер при статусе adopted */
+  adoptedAt?: string
 }
 
 export type ApplicationStatus = "pending" | "approved" | "rejected" | "cancelled"
@@ -51,12 +53,16 @@ export type Application = {
   housing: Housing
   hasOtherPets: boolean
   otherPetsNote?: string
+  /** дети до 10 лет; в старых заявках поля нет */
+  hasKids?: boolean
   experience: Experience
   comment?: string
   preferredTime: VisitTime
   status: ApplicationStatus
   staffComments: StaffComment[]
   createdAt: string
+  /** когда заявку одобрили, отклонили или отозвали */
+  decidedAt?: string
 }
 
 export type Role = "user" | "volunteer" | "admin"
@@ -105,4 +111,44 @@ export type PetFilters = {
   compat?: ("kids" | "cats" | "dogs")[]
   status?: Exclude<PetStatus, "adopted">[]
   sort?: SortKey
+}
+
+// ——— Аналитика дашборда (считает server/analytics.ts) ———
+
+export type WeekPoint = {
+  /** начало недели (понедельник), ISO */
+  start: string
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+  cancelled: number
+  /** уехали домой за неделю */
+  adopted: number
+}
+
+export type Insight = { tone: "warning" | "info" | "success"; title: string; text: string; link?: string }
+
+export type PetRef = { id: string; name: string; photo: string; species: Species; value: number }
+
+export type Analytics = {
+  weeks: WeekPoint[]
+  totals: {
+    applications: number
+    /** заявок за 4 последние недели и за 4 недели до них — для тренда */
+    last4: number
+    prev4: number
+    approvalRate: number
+    /** отказов за период — база для долей причин */
+    rejected: number
+    avgDecisionDays: number | null
+    avgDaysToHome: number | null
+    adopted: number
+  }
+  funnel: { label: string; value: number }[]
+  species: { species: Species; waiting: number; applications: number }[]
+  rejectReasons: { reason: string; count: number }[]
+  topPets: PetRef[]
+  forgotten: PetRef[]
+  insights: Insight[]
 }

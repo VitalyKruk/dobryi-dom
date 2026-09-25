@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { ExternalLink, Loader2, Mail, Phone, Send } from "lucide-react"
+import { ExternalLink, Loader2, Mail, Phone, Search, Send } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -10,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { AdminHeading } from "@/components/layout/admin-layout"
+import { Pager } from "@/components/pager"
 import { ApplicationStatusBadge, PetImage, petMeta } from "@/components/pet"
 import { EmptyState, ErrorState } from "@/components/states"
 import { useAuth } from "@/context/auth"
@@ -23,6 +25,8 @@ import {
   visitTimeLabel,
 } from "@/lib/format"
 import type { Application, ApplicationStatus, Pet } from "@/lib/types"
+
+const PAGE_SIZE = 15
 
 const statusTabs: { value: ApplicationStatus | "all"; label: string }[] = [
   { value: "pending", label: "На рассмотрении" },
@@ -69,6 +73,7 @@ function Details({
   const rows: [string, string][] = [
     ["Город", app.city],
     ["Жильё", housingLabel[app.housing]],
+    ["Дети до 10 лет", app.hasKids === undefined ? "Не спросили" : app.hasKids ? "Есть" : "Нет"],
     ["Другие животные", app.hasOtherPets ? app.otherPetsNote || "Да" : "Нет"],
     ["Опыт", experienceLabel[app.experience]],
     ["Время визита", visitTimeLabel[app.preferredTime]],
@@ -177,6 +182,8 @@ export default function AdminApplicationsPage() {
   const [sp, setSp] = useSearchParams()
   const tab = (sp.get("status") as ApplicationStatus | "all" | null) ?? "pending"
   const openId = sp.get("id")
+  const q = sp.get("q") ?? ""
+  const page = Math.max(1, Number(sp.get("page")) || 1)
   const data = useAsync(async () => {
     const [apps, pets] = await Promise.all([api.listApplications(), api.listAllPets()])
     return { apps, pets }
@@ -184,18 +191,29 @@ export default function AdminApplicationsPage() {
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(sp)
-    if (value === null) next.delete(key)
+    if (value === null || value === "") next.delete(key)
     else next.set(key, value)
+    // Сменили фильтр — возвращаемся на первую страницу
+    if (key === "status" || key === "q") next.delete("page")
     setSp(next, { replace: key === "id" ? false : true })
   }
 
   if (data.status === "error") return <ErrorState onRetry={data.reload} />
   const apps = data.data?.apps ?? []
   const pets = data.data?.pets ?? []
-  const count = (s: ApplicationStatus | "all") => (s === "all" ? apps.length : apps.filter((a) => a.status === s).length)
-  const list = apps.filter((a) => tab === "all" || a.status === tab)
-  const opened = apps.find((a) => a.id === openId)
   const petOf = (a: Application) => pets.find((p) => p.id === a.petId)
+  const count = (s: ApplicationStatus | "all") => (s === "all" ? apps.length : apps.filter((a) => a.status === s).length)
+  const needle = q.trim().toLowerCase()
+  const list = apps.filter(
+    (a) =>
+      (tab === "all" || a.status === tab) &&
+      (!needle ||
+        [a.id, a.name, a.city, a.email, petOf(a)?.name ?? ""].some((v) => v.toLowerCase().includes(needle))),
+  )
+  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const current = Math.min(page, pages)
+  const visible = list.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
+  const opened = apps.find((a) => a.id === openId)
 
   const update = (a: Application) => {
     data.setData((d) => ({ ...d, apps: d.apps.map((x) => (x.id === a.id ? a : x)) }))
@@ -227,6 +245,18 @@ export default function AdminApplicationsPage() {
         </div>
       </Tabs>
 
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input
+          type="search"
+          value={q}
+          onChange={(e) => setParam("q", e.target.value)}
+          placeholder="№ заявки, кандидат, город или питомец"
+          aria-label="Поиск по заявкам"
+          className="h-12 bg-card pl-12"
+        />
+      </div>
+
       {data.status === "loading" ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }, (_, i) => (
@@ -234,7 +264,19 @@ export default function AdminApplicationsPage() {
           ))}
         </div>
       ) : list.length === 0 ? (
-        <EmptyState title="Здесь пусто" text="Заявок с таким статусом нет. Отличный повод выпить чаю ☕" />
+        needle ? (
+          <EmptyState
+            title="Ничего не нашли"
+            text={`По запросу «${q.trim()}» в этой вкладке заявок нет. Проверьте написание или поищите во вкладке «Все».`}
+            action={
+              <Button variant="outline" onClick={() => setParam("q", null)}>
+                Сбросить поиск
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState title="Здесь пусто" text="Заявок с таким статусом нет. Отличный повод выпить чаю ☕" />
+        )
       ) : (
         <>
           <div className="hidden overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/5 md:block">
@@ -252,7 +294,7 @@ export default function AdminApplicationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.map((a) => {
+                {visible.map((a) => {
                   const pet = petOf(a)
                   return (
                     <TableRow key={a.id} className="cursor-pointer" onClick={() => setParam("id", a.id)}>
@@ -290,7 +332,7 @@ export default function AdminApplicationsPage() {
             </Table>
           </div>
           <ul className="flex flex-col gap-2 md:hidden">
-            {list.map((a) => {
+            {visible.map((a) => {
               const pet = petOf(a)
               return (
                 <li key={a.id}>
@@ -314,6 +356,12 @@ export default function AdminApplicationsPage() {
               )
             })}
           </ul>
+          <div className="flex flex-col items-center gap-2">
+            <Pager page={current} total={pages} onChange={(n) => setParam("page", n === 1 ? null : String(n))} />
+            <p className="text-sm text-muted-foreground">
+              Показаны {(current - 1) * PAGE_SIZE + 1}–{(current - 1) * PAGE_SIZE + visible.length} из {list.length}
+            </p>
+          </div>
         </>
       )}
 
@@ -325,7 +373,10 @@ export default function AdminApplicationsPage() {
                 <DialogTitle className="text-xl">
                   Заявка {opened.id} · {opened.name}
                 </DialogTitle>
-                <DialogDescription>Получена {formatDate(opened.createdAt)}</DialogDescription>
+                <DialogDescription>
+                  Получена {formatDate(opened.createdAt)}
+                  {opened.decidedAt && ` · решение ${formatDate(opened.decidedAt)}`}
+                </DialogDescription>
               </DialogHeader>
               <Details app={opened} pet={petOf(opened)} onUpdate={update} />
             </>

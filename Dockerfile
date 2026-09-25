@@ -18,7 +18,7 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force \
  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
       /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 COPY server ./server
-COPY src/lib/seed.ts src/lib/types.ts src/lib/format.ts src/lib/pets-query.ts ./src/lib/
+COPY src/lib/seed.ts src/lib/seed-history.ts src/lib/types.ts src/lib/format.ts src/lib/pets-query.ts src/lib/match.ts ./src/lib/
 RUN rm -f server/*.test.ts && mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 3001

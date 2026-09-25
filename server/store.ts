@@ -6,6 +6,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { seedApplications, seedPets, seedUsers, seedVolunteers, DEMO_PASSWORD } from "../src/lib/seed.ts"
+import { buildApplications } from "../src/lib/seed-history.ts"
 import type { Application, Pet, User, Volunteer } from "../src/lib/types.ts"
 import { hashPassword } from "./auth.ts"
 
@@ -28,9 +29,11 @@ export type DB = {
 export async function seedDb(): Promise<DB> {
   const passwords: Record<string, string> = {}
   for (const u of seedUsers) passwords[u.email] = await hashPassword(DEMO_PASSWORD)
+  // Свежие заявки из seed.ts + история за три месяца для дашборда
+  const { applications, seq } = buildApplications(seedApplications)
   return structuredClone({
     pets: seedPets,
-    applications: seedApplications,
+    applications,
     users: seedUsers,
     passwords,
     sessions: [],
@@ -38,7 +41,7 @@ export async function seedDb(): Promise<DB> {
     volunteerRequests: [],
     subscribers: [],
     feedback: [],
-    seq: 1046,
+    seq,
   })
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react"
+import { LayoutGrid, List, Search, SlidersHorizontal, Sparkles, X } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -278,7 +278,13 @@ export default function CatalogPage() {
         title="Каталог питомцев"
         subtitle="Кошки и собаки, которые ждут свой дом. Фильтруйте по характеру и условиям — и знакомьтесь!"
         crumbs={[{ label: "Главная", to: "/" }, { label: "Каталог" }]}
-      />
+      >
+        <Button asChild variant="outline" className="self-start bg-card">
+          <Link to="/match">
+            <Sparkles /> Подобрать по моим условиям
+          </Link>
+        </Button>
+      </PageHeader>
       <div className="container-page grid gap-8 py-8 md:py-12 lg:grid-cols-[288px_1fr] lg:gap-12">
         <aside aria-label="Фильтры" className="hidden lg:block">
           <div className="sticky top-24 flex max-h-[calc(100svh-120px)] flex-col overflow-y-auto rounded-3xl bg-secondary px-6 py-4">

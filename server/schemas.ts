@@ -44,6 +44,7 @@ export const applicationSchema = z
     city: z.string().trim().min(2, { error: "Укажите город" }).max(80),
     housing: z.enum(["apartment", "house", "other"], { error: "Выберите тип жилья" }),
     hasOtherPets: z.boolean(),
+    hasKids: z.boolean({ error: "Подскажите, есть ли в семье маленькие дети" }).optional(),
     otherPetsNote: z.string().trim().max(300).optional(),
     experience: z.enum(["none", "some", "experienced"], { error: "Выберите вариант" }),
     comment: z.string().trim().max(1000, { error: "Давайте уместимся в 1000 символов" }).optional(),
@@ -53,6 +54,28 @@ export const applicationSchema = z
     path: ["otherPetsNote"],
     error: "Расскажите в двух словах, кто живёт с вами",
   })
+
+const csv = <T extends [string, ...string[]]>(values: T) =>
+  z
+    .string()
+    .max(100)
+    .transform((v) => v.split(",").filter(Boolean))
+    .pipe(z.array(z.enum(values)).max(values.length))
+    .optional()
+
+export const recommendationsQuerySchema = z.object({
+  housing: z.enum(["apartment", "house", "other"]).optional(),
+  kids: z.enum(["yes", "no"]).optional(),
+  other: csv(["cat", "dog", "none"]),
+  experience: z.enum(["none", "some", "experienced"]).optional(),
+  species: csv(["cat", "dog"]),
+  exclude: z
+    .string()
+    .max(500)
+    .transform((v) => v.split(",").filter(Boolean).slice(0, 50))
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(12).default(6),
+})
 
 export const applicationStatusSchema = z.object({
   status: z.enum(["pending", "approved", "rejected", "cancelled"]),
