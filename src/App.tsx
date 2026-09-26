@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react"
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom"
+import { createBrowserRouter, createMemoryRouter, Outlet, RouterProvider } from "react-router-dom"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -53,7 +53,10 @@ const adminFallback = (
   </div>
 )
 
-const router = createBrowserRouter([
+// Статическая сборка живёт внутри чужой страницы без своего адреса — маршруты храним в памяти
+const createRouter = import.meta.env.VITE_STATIC === "1" ? createMemoryRouter : createBrowserRouter
+
+const router = createRouter([
   {
     element: <Root />,
     children: [
