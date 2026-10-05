@@ -179,7 +179,7 @@ export function PetCard({ pet, layout = "grid", eager }: { pet: Pet; layout?: "g
   }
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/5 transition hover:-translate-y-1 hover:shadow-lg hover:ring-secondary-border has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/5 transition hover:-translate-y-1 hover:shadow-lg hover:ring-secondary-border has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring">
       <div className="relative">
         <PetImage src={pet.photos[0]} alt={alt} width={480} eager={eager} className="transition group-hover:brightness-105" />
         {fresh && <NewBadge sex={pet.sex} className="absolute top-4 left-4" />}
@@ -198,13 +198,16 @@ export function PetCard({ pet, layout = "grid", eager }: { pet: Pet; layout?: "g
         <p className="text-sm text-muted-foreground">
           {pet.breed}, {sizeLabel[pet.size].toLowerCase()} размер
         </p>
-        {/* Декоративная «кнопка»: вся карточка — ссылка, отдельный tab-stop не нужен */}
-        <span
-          aria-hidden="true"
-          className="mt-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-secondary-foreground text-sm font-semibold text-secondary-foreground transition group-hover:bg-accent"
-        >
-          Подробнее <ArrowRight className="size-4 transition group-hover:translate-x-1" />
-        </span>
+        {/* Декоративная «кнопка»: вся карточка — ссылка, отдельный tab-stop не нужен.
+            mt-auto прижимает её к низу, чтобы в ряду карточек кнопки стояли на одном уровне */}
+        <div className="mt-auto pt-2">
+          <span
+            aria-hidden="true"
+            className="flex h-10 items-center justify-center gap-2 rounded-lg border border-secondary-foreground text-sm font-semibold text-secondary-foreground transition group-hover:bg-accent"
+          >
+            Подробнее <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+          </span>
+        </div>
       </div>
     </article>
   )
