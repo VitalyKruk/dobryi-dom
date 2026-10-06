@@ -9,6 +9,7 @@ import type {
   Analytics,
   Application,
   ApplicationStatus,
+  InvestorReport,
   Pet,
   PetFilters,
   PetStatus,
@@ -128,6 +129,7 @@ export type Stats = {
 }
 export const getStats = () => get<Stats>("/stats")
 export const getAnalytics = () => get<Analytics>("/admin/analytics")
+export const getInvestorReport = () => get<InvestorReport>("/investors")
 
 // ——— Подбор «Подходят вам» ———
 

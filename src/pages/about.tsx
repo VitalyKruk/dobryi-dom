@@ -10,7 +10,7 @@ import { PetImage } from "@/components/pet"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
 import { formatNumber, initials } from "@/lib/format"
-import { seedPets, team } from "@/lib/seed"
+import { FOUNDED_YEAR, seedPets, team } from "@/lib/seed"
 
 const gallery = seedPets.filter((p) => ["charli", "leva", "nika", "bonya", "sonya", "keks", "alma", "tuchka"].includes(p.id))
 
@@ -35,7 +35,7 @@ export default function AboutPage() {
   const numbers = [
     { value: stats.data?.adopted, label: "питомцев нашли дом" },
     { value: stats.data?.waiting, label: "ждут сейчас" },
-    { value: 10, label: "лет работы" },
+    { value: new Date().getFullYear() - FOUNDED_YEAR, label: "лет работы" },
     { value: 85, label: "волонтёров в команде" },
   ]
   return (

@@ -280,6 +280,9 @@ export const seedPets: Pet[] = [
 /** Пристроено за всё время до запуска сайта (для счётчика на главной) */
 export const ADOPTED_BEFORE_SITE = 121
 
+/** Год основания — от него считаются «лет работы» на сайте */
+export const FOUNDED_YEAR = 2016
+
 export const DEMO_PASSWORD = "demo1234"
 
 export const seedUsers: User[] = [

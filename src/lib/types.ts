@@ -152,3 +152,19 @@ export type Analytics = {
   forgotten: PetRef[]
   insights: Insight[]
 }
+
+/** Открытые данные для инвесторов: только обезличенные агрегаты, без имён и контактов */
+export type InvestorReport = {
+  generatedAt: string
+  /** пристроено до запуска сайта — из архива приюта, в базе сайта этих питомцев нет */
+  adoptedBeforeSite: number
+  pets: { adoptedOnSite: number; waiting: number; available: number; reserved: number }
+  volunteers: number
+  /** все заявки в базе и дата самой ранней — с неё начинаются данные */
+  applicationsAllTime: number
+  dataSince: string | null
+  weeks: WeekPoint[]
+  totals: Analytics["totals"]
+  funnel: Analytics["funnel"]
+  species: Analytics["species"]
+}

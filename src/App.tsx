@@ -15,6 +15,7 @@ import PetPage from "@/pages/pet"
 import ApplyPage from "@/pages/apply"
 import AboutPage from "@/pages/about"
 import HelpPage from "@/pages/help"
+import InvestorsPage from "@/pages/investors"
 import AccountPage, { GuestFavoritesPage } from "@/pages/account"
 import { LoginPage, RegisterPage } from "@/pages/auth"
 import { ContactsPage, FaqPage, PrivacyPage } from "@/pages/info"
@@ -66,6 +67,7 @@ const router = createBrowserRouter([
           { path: "apply/:petId", element: <ApplyPage /> },
           { path: "about", element: <AboutPage /> },
           { path: "help", element: <HelpPage /> },
+          { path: "investors", element: <InvestorsPage /> },
           { path: "contacts", element: <ContactsPage /> },
           { path: "faq", element: <FaqPage /> },
           { path: "privacy", element: <PrivacyPage /> },

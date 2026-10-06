@@ -146,6 +146,21 @@ describe("аналитика и подбор", () => {
     assert.ok(r.json.rejectReasons.length > 0 && r.json.insights.length > 0)
   })
 
+  test("данные для инвесторов: публичные, сходятся с дашбордом и без персональных данных", async () => {
+    const r = await api("GET", "/api/investors")
+    assert.equal(r.status, 200)
+    const dash = (await api("GET", "/api/admin/analytics", undefined, await login("olga@dobryi-dom.ru"))).json
+    assert.deepEqual(r.json.totals, dash.totals)
+    assert.deepEqual(r.json.funnel, dash.funnel)
+    const stats = (await api("GET", "/api/stats")).json
+    assert.equal(r.json.adoptedBeforeSite + r.json.pets.adoptedOnSite, stats.adopted)
+    assert.equal(r.json.pets.waiting, stats.waiting)
+    assert.equal(r.json.volunteers, stats.volunteers)
+    const raw = JSON.stringify(r.json)
+    for (const leak of ["@", "+7", "Анна", "rejectReasons", "insights", "staffComments"]) assert.ok(!raw.includes(leak), `в ответе есть «${leak}»`)
+    assert.deepEqual((await api("GET", "/api/investors", undefined, undefined, { "x-demo": "empty" })).json.pets.waiting, 0)
+  })
+
   test("подбор по анкете: не предлагает тех, кто не ладит с детьми и кошками", async () => {
     const r = await api("GET", "/api/recommendations?housing=apartment&kids=yes&other=cat&experience=none&limit=12")
     assert.equal(r.status, 200)

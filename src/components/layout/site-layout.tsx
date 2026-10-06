@@ -293,7 +293,7 @@ function Footer() {
         <nav aria-label="Навигация в подвале">
           <h2 className="mb-4 text-base">Разделы</h2>
           <ul className="flex flex-col gap-2 text-sm">
-            {[...navItems, { to: "/account", label: "Личный кабинет" }].map((n) => (
+            {[...navItems, { to: "/investors", label: "Инвесторам и партнёрам" }, { to: "/account", label: "Личный кабинет" }].map((n) => (
               <li key={n.to}>
                 <Link to={n.to} className="rounded hover:text-secondary-foreground hover:underline">
                   {n.label}

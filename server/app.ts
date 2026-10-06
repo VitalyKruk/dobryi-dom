@@ -9,7 +9,7 @@ import express, { type Request } from "express"
 import { ADOPTED_BEFORE_SITE } from "../src/lib/seed.ts"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "../src/lib/match.ts"
 import { featuredPets, filtersFromQuery, matchesFilters, similarPets, sortPets } from "../src/lib/pets-query.ts"
-import type { Application, Pet, Species, User } from "../src/lib/types.ts"
+import type { Application, InvestorReport, Pet, Species, User } from "../src/lib/types.ts"
 import { buildAnalytics } from "./analytics.ts"
 import { authenticate, can, hashPassword, hashToken, newToken, requirePermission, requireUser, verifyPassword } from "./auth.ts"
 import { errorHandler, HttpError, parse } from "./errors.ts"
@@ -219,6 +219,35 @@ export function createApp(store: Store) {
       pendingApplications: apps.filter((a) => a.status === "pending").length,
       volunteers: empty ? 0 : db().volunteers.length,
     })
+  })
+
+  /**
+   * Раздел для инвесторов: те же расчёты, что на дашборде (buildAnalytics), но только
+   * обезличенные агрегаты — без причин отказов, имён питомцев и подсказок команде.
+   */
+  app.get("/api/investors", (req, res) => {
+    const empty = demoEmpty(req)
+    const pets = empty ? [] : db().pets
+    const apps = empty ? [] : db().applications
+    const a = buildAnalytics(pets, apps)
+    const report: InvestorReport = {
+      generatedAt: now(),
+      adoptedBeforeSite: empty ? 0 : ADOPTED_BEFORE_SITE,
+      pets: {
+        adoptedOnSite: pets.filter((p) => p.status === "adopted").length,
+        waiting: pets.filter((p) => p.status !== "adopted").length,
+        available: pets.filter((p) => p.status === "available").length,
+        reserved: pets.filter((p) => p.status === "reserved").length,
+      },
+      volunteers: empty ? 0 : db().volunteers.length,
+      applicationsAllTime: apps.length,
+      dataSince: apps.reduce<string | null>((min, x) => (!min || x.createdAt < min ? x.createdAt : min), null),
+      weeks: a.weeks,
+      totals: a.totals,
+      funnel: a.funnel,
+      species: a.species,
+    }
+    res.json(report)
   })
 
   /** Дашборд: динамика, воронка, причины отказов и подсказки команде */
