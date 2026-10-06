@@ -2,6 +2,17 @@ import { Suspense, useEffect, useState } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import { ClipboardList, ExternalLink, LayoutDashboard, Menu, PawPrint, RotateCcw, Users } from "lucide-react"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -65,19 +76,48 @@ function SideNav({ pending }: { pending: number | null }) {
             <ExternalLink /> На сайт
           </Link>
         </Button>
-        <Button
-          variant="ghost"
-          className="justify-start text-secondary-foreground"
-          onClick={async () => {
-            await api.resetDemoData()
-            toast.success("Демо-данные восстановлены")
-            setTimeout(() => window.location.reload(), 400)
-          }}
-        >
-          <RotateCcw /> Сбросить демо-данные
-        </Button>
+        {can("users.manage") && <ResetDemoButton />}
       </div>
     </div>
+  )
+}
+
+/** Сброс стирает все заявки, правки и пользователей — только с подтверждением */
+function ResetDemoButton() {
+  const [busy, setBusy] = useState(false)
+  const reset = async () => {
+    setBusy(true)
+    try {
+      await api.resetDemoData()
+      toast.success("Демо-данные восстановлены")
+      setTimeout(() => window.location.reload(), 400)
+    } catch (err) {
+      toast.error((err as Error).message)
+      setBusy(false)
+    }
+  }
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" className="justify-start text-secondary-foreground" disabled={busy}>
+          <RotateCcw /> Сбросить демо-данные
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Сбросить демо-данные?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Питомцы, заявки, расписание и пользователи вернутся к исходному состоянию. Все изменения пропадут.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Отмена</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={reset}>
+            Сбросить
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

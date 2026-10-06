@@ -53,7 +53,9 @@ export function PageHeader({
     <div className={cn("bg-secondary", className)}>
       <div className="container-page flex flex-col gap-4 py-8 md:py-12">
         {crumbs && <Crumbs items={crumbs} />}
-        <h1 className="text-3xl leading-10 md:text-4xl md:leading-12">{title}</h1>
+        {/* Страховка от слов шире узкого экрана: не все браузеры умеют русские переносы,
+            поэтому в известных длинных словах стоит мягкий перенос (&shy;) */}
+        <h1 className="text-3xl leading-10 break-words hyphens-auto md:text-4xl md:leading-12">{title}</h1>
         {subtitle && <p className="max-w-2xl text-lg leading-7 text-foreground/80">{subtitle}</p>}
         {children}
       </div>

@@ -315,6 +315,9 @@ export function GuestFavoritesPage() {
   const { user } = useAuth()
   useEffect(() => {
     document.title = "Избранное — Добрый дом"
+    return () => {
+      document.title = "Добрый дом — приют для кошек и собак"
+    }
   }, [])
   if (user) return <Navigate to="/account?tab=favorites" replace />
   return (

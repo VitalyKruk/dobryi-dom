@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom"
 import {
   Pagination,
   PaginationContent,
@@ -21,7 +22,16 @@ function pages(current: number, total: number): (number | "…")[] {
 }
 
 export function Pager({ page, total, onChange }: { page: number; total: number; onChange: (p: number) => void }) {
+  const [params] = useSearchParams()
   if (total <= 1) return null
+  // href сохраняет фильтры из адреса — иначе «открыть в новой вкладке» их теряет
+  const href = (p: number) => {
+    const next = new URLSearchParams(params)
+    if (p <= 1) next.delete("page")
+    else next.set("page", String(p))
+    const qs = next.toString()
+    return qs ? `?${qs}` : "?"
+  }
   const go = (p: number) => (e: React.MouseEvent) => {
     e.preventDefault()
     if (p >= 1 && p <= total && p !== page) onChange(p)
@@ -31,7 +41,7 @@ export function Pager({ page, total, onChange }: { page: number; total: number; 
       <PaginationContent className="gap-1">
         <PaginationItem>
           <PaginationPrevious
-            href={`?page=${page - 1}`}
+            href={href(page - 1)}
             onClick={go(page - 1)}
             aria-disabled={page === 1}
             className={page === 1 ? "pointer-events-none opacity-50" : ""}
@@ -44,7 +54,7 @@ export function Pager({ page, total, onChange }: { page: number; total: number; 
             </PaginationItem>
           ) : (
             <PaginationItem key={p}>
-              <PaginationLink href={`?page=${p}`} isActive={p === page} onClick={go(p)} aria-label={`Страница ${p}`}>
+              <PaginationLink href={href(p)} isActive={p === page} onClick={go(p)} aria-label={`Страница ${p}`}>
                 {p}
               </PaginationLink>
             </PaginationItem>
@@ -52,7 +62,7 @@ export function Pager({ page, total, onChange }: { page: number; total: number; 
         )}
         <PaginationItem>
           <PaginationNext
-            href={`?page=${page + 1}`}
+            href={href(page + 1)}
             onClick={go(page + 1)}
             aria-disabled={page === total}
             className={page === total ? "pointer-events-none opacity-50" : ""}

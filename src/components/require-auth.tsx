@@ -24,15 +24,21 @@ export function RequireAuth({ permission, children }: { permission?: Permission;
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
   }
   if (permission && !can(permission)) {
+    // Волонтёр уже сотрудник: ему нужен не «вы не сотрудник», а «раздел для администратора» и путь назад в кабинет
+    const staff = can("admin.access")
     return (
       <div className="container-page section-y">
         <EmptyState
           illustration={<SadDog className="h-32 w-auto md:h-40" />}
-          title="Сюда могут только сотрудники приюта"
-          text="Если вы волонтёр, попросите администратора выдать доступ."
+          title={staff ? "Этот раздел — только для администратора" : "Сюда могут только сотрудники приюта"}
+          text={
+            staff
+              ? "Если вам нужен доступ, попросите администратора приюта."
+              : "Если вы волонтёр, попросите администратора выдать доступ."
+          }
           action={
             <Button asChild variant="outline">
-              <Link to="/">На главную</Link>
+              {staff ? <Link to="/admin">В кабинет сотрудника</Link> : <Link to="/">На главную</Link>}
             </Button>
           }
         />
