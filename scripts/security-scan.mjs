@@ -165,7 +165,9 @@ step(`trivy image — образы ${IMAGES.join(", ")}`, () => {
     return "skip"
   }
   console.log("  Собираю образы…")
-  const build = run("docker", ["compose", "build", "--quiet", "web", "api"])
+  // Дата в APK_UPGRADE_DATE пересобирает слой apk upgrade раз в день — сканируем свежие пакеты Alpine
+  process.env.APK_UPGRADE_DATE = new Date().toISOString().slice(0, 10)
+  const build = run("docker", ["compose", "build", "--quiet", "--pull", "web", "api"])
   if (build.status !== 0) return "error"
   let failed = false
   for (const image of IMAGES) {

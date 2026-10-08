@@ -14,7 +14,7 @@ import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites
 import { featuredPets, filtersFromQuery, filtersToQuery, matchesFilters, similarPets, sortPets } from "./pets-query"
 import { ADOPTED_BEFORE_SITE, DEMO_PASSWORD, seedApplications, seedPets, seedUsers, seedVolunteers } from "./seed"
 import { buildApplications } from "./seed-history"
-import type { Application, ApplicationStatus, Pet, PetFilters, PetStatus, Role, User, Volunteer } from "./types"
+import type { Application, ApplicationStatus, InvestorReport, Pet, PetFilters, PetStatus, Role, User, Volunteer } from "./types"
 
 export { ApiError, getToken, setToken }
 export type { MatchQuery, NewApplication, PetInput, Stats }
@@ -217,6 +217,32 @@ export function getAnalytics() {
   return call((c) => {
     requirePermission(c, "applications.view")
     return buildAnalytics(c.empty ? [] : c.d.pets, c.empty ? [] : c.d.applications)
+  })
+}
+
+/** Раздел для инвесторов: обезличенные агрегаты, как GET /api/investors */
+export function getInvestorReport() {
+  return call<InvestorReport>((c) => {
+    const pets = c.empty ? [] : c.d.pets
+    const apps = c.empty ? [] : c.d.applications
+    const a = buildAnalytics(pets, apps)
+    return {
+      generatedAt: now(),
+      adoptedBeforeSite: c.empty ? 0 : ADOPTED_BEFORE_SITE,
+      pets: {
+        adoptedOnSite: pets.filter((p) => p.status === "adopted").length,
+        waiting: pets.filter((p) => p.status !== "adopted").length,
+        available: pets.filter((p) => p.status === "available").length,
+        reserved: pets.filter((p) => p.status === "reserved").length,
+      },
+      volunteers: c.empty ? 0 : c.d.volunteers.length,
+      applicationsAllTime: apps.length,
+      dataSince: apps.reduce<string | null>((min, x) => (!min || x.createdAt < min ? x.createdAt : min), null),
+      weeks: a.weeks,
+      totals: a.totals,
+      funnel: a.funnel,
+      species: a.species,
+    }
   })
 }
 
