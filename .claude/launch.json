@@ -13,11 +13,16 @@
     },
     {
       "name": "dobryi-dom-docker-web",
+      "url": "http://localhost:8081",
+      "port": 8081
+    },
+    {
+      "name": "dobryi-dom-docker-web-build",
       "runtimeExecutable": "powershell",
       "runtimeArgs": [
         "-NoProfile",
         "-Command",
-        "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); docker compose up --build web"
+        "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); docker compose up --build web api"
       ],
       "port": 8081
     },
