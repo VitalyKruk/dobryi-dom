@@ -1,7 +1,11 @@
 services:
   # Продакшн: nginx со статикой — http://localhost:8081 (порт меняется через WEB_PORT)
   web:
-    build: .
+    build:
+      context: .
+      # Меняется раз в день — обновления безопасности Alpine не застревают в кеше Docker
+      args:
+        APK_UPGRADE_DATE: ${APK_UPGRADE_DATE:-unset}
     image: dobryi-dom:latest
     ports:
       - "${WEB_PORT:-8081}:8080"
@@ -15,6 +19,8 @@ services:
     build:
       context: .
       target: api
+      args:
+        APK_UPGRADE_DATE: ${APK_UPGRADE_DATE:-unset}
     image: dobryi-dom-api:latest
     volumes:
       - api-data:/data

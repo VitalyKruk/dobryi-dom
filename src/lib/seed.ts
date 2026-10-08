@@ -13,9 +13,23 @@ const bornMonthsAgo = (m: number) => {
 /** [x, y, zoom]: центр мордочки в долях кадра и приближение для мелких фигурок */
 type Focus = [number, number, number]
 
+/**
+ * Статическая сборка (npm run build:static) не может грузить картинки с чужих доменов:
+ * фото заранее скачивает scripts/build-static.mjs и кладёт рядом со страницей.
+ * В Node (сервер) import.meta.env нет — там всегда адреса Unsplash.
+ */
+const STATIC_BUILD = (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_STATIC === "1"
+
 /** Кадрируем вокруг мордочки, а не по «энтропии» — иначе на вертикальных фото срезается голова */
 const photo = (id: string, [x, y, z]: Focus, zoom = 1) =>
-  `https://images.unsplash.com/photo-${id}?crop=focalpoint&fp-x=${x}&fp-y=${y}&fp-z=${Math.max(1, z * zoom)}`
+  STATIC_BUILD
+    ? `photos/${id}${zoom > 1 ? "-zoom" : ""}.jpg`
+    : `https://images.unsplash.com/photo-${id}?crop=focalpoint&fp-x=${x}&fp-y=${y}&fp-z=${Math.max(1, z * zoom)}`
+
+/** Фото к блоку «Миссия» на странице «О приюте» */
+export const missionPhoto = STATIC_BUILD
+  ? "photos/mission.jpg"
+  : "https://images.unsplash.com/photo-1415369629372-26f2fe60c467?crop=entropy"
 
 type Seed = Omit<Pet, "photos" | "birthDate" | "addedAt" | "vaccinated" | "sterilized" | "chipped"> & {
   photo: string

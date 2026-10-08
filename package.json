@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "tsc -b && vite build",
+    "build:static": "tsc -b && node scripts/build-static.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "security": "node scripts/security-scan.mjs",

@@ -8,3 +8,5 @@ Dockerfile
 compose.yaml
 .dockerignore
 data
+dist-static
+.static-cache

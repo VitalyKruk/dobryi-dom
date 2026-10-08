@@ -28,3 +28,7 @@ dist-ssr
 
 # Данные локального API (db.json и загруженные фото)
 data
+
+# Статическая версия (npm run build:static) и кеш скачанных фото
+dist-static
+.static-cache

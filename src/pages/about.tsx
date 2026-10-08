@@ -10,13 +10,29 @@ import { PetImage } from "@/components/pet"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
 import { formatNumber, initials } from "@/lib/format"
-import { FOUNDED_YEAR, seedPets, team } from "@/lib/seed"
+import { FOUNDED_YEAR, missionPhoto, seedPets, team } from "@/lib/seed"
 
 const gallery = seedPets.filter((p) => ["charli", "leva", "nika", "bonya", "sonya", "keks", "alma", "tuchka"].includes(p.id))
 
 export const MAP_SRC = "https://www.openstreetmap.org/export/embed.html?bbox=30.28%2C59.92%2C30.36%2C59.95&layer=mapnik&marker=59.935%2C30.32"
 
+const MAP_LINK = "https://www.openstreetmap.org/?mlat=59.935&mlon=30.32#map=15/59.935/30.32"
+
 export function MapEmbed() {
+  // Статическая сборка открывается внутри чужой страницы, где сторонние фреймы запрещены, — даём ссылку на карту
+  if (import.meta.env.VITE_STATIC === "1") {
+    return (
+      <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-4 rounded-3xl bg-secondary p-6 text-center ring-1 ring-foreground/5 md:aspect-[16/9]">
+        <MapPin className="size-10 text-secondary-foreground" aria-hidden="true" />
+        <p className="text-lg font-bold">Санкт-Петербург, ул. Солнечная, 12</p>
+        <Button asChild variant="outline" className="bg-card">
+          <a href={MAP_LINK} target="_blank" rel="noopener noreferrer">
+            Открыть на карте <ArrowRight />
+          </a>
+        </Button>
+      </div>
+    )
+  }
   return (
     <div className="overflow-hidden rounded-3xl bg-secondary ring-1 ring-foreground/5">
       <iframe
@@ -64,7 +80,7 @@ export default function AboutPage() {
           </p>
         </div>
         <PetImage
-          src="https://images.unsplash.com/photo-1415369629372-26f2fe60c467?crop=entropy"
+          src={missionPhoto}
           alt="Кошка даёт лапу волонтёру"
           width={720}
           className="rounded-3xl"
