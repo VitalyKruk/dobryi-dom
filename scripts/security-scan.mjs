@@ -167,7 +167,13 @@ step(`trivy image — образы ${IMAGES.join(", ")}`, () => {
   console.log("  Собираю образы…")
   // Дата в APK_UPGRADE_DATE пересобирает слой apk upgrade раз в день — сканируем свежие пакеты Alpine
   process.env.APK_UPGRADE_DATE = new Date().toISOString().slice(0, 10)
-  const build = run("docker", ["compose", "build", "--quiet", "--pull", "web", "api"])
+  // --pull подтягивает свежие базовые образы; если Docker Hub недоступен (таймаут сети),
+  // собираем из локальных — слой apk upgrade всё равно обновит пакеты Alpine
+  let build = run("docker", ["compose", "build", "--quiet", "--pull", "web", "api"])
+  if (build.status !== 0) {
+    console.log(yellow("  Не удалось обновить базовые образы с Docker Hub — собираю из локальных."))
+    build = run("docker", ["compose", "build", "--quiet", "web", "api"])
+  }
   if (build.status !== 0) return "error"
   let failed = false
   for (const image of IMAGES) {
