@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -6,7 +7,6 @@ import { Camera, Car, Copy, Dog, HandCoins, Loader2, Package, Sparkles } from "l
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -134,7 +134,7 @@ const amounts = [300, 500, 1000, 3000]
 function Donate() {
   const [amount, setAmount] = useState<number | "custom">(500)
   const [custom, setCustom] = useState("")
-  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const value = amount === "custom" ? Number(custom) : amount
   const valid = Number.isFinite(value) && value >= 50
   const requisites = "АНО «Добрый дом», ИНН 7800000000, р/с 40703810000000000000, БИК 044030000"
@@ -185,7 +185,16 @@ function Donate() {
               ? "Этого хватит на неделю корма для кошки 🐱"
               : "Любая сумма важна."}
         </p>
-        <Button size="lg" className="self-start" disabled={!valid} onClick={() => setOpen(true)}>
+        {/* Оплата ещё не подключена — фейкдор: считаем спрос и показываем «в разработке» */}
+        <Button
+          size="lg"
+          className="self-start"
+          disabled={!valid}
+          onClick={() => {
+            api.trackFakeDoor("donate")
+            navigate("/soon/donate")
+          }}
+        >
           <HandCoins /> Помочь {valid && `${formatNumber(value)} ₽`}
         </Button>
       </div>
@@ -208,21 +217,6 @@ function Donate() {
         </Button>
         <p className="text-sm text-foreground/80">Назначение платежа: «Благотворительное пожертвование».</p>
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Здесь будет платёжный виджет</DialogTitle>
-            <DialogDescription>
-              В демо-версии оплата не подключена. В рабочей версии тут откроется форма банка на {formatNumber(value || 0)} ₽.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Понятно
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

@@ -17,5 +17,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["server", "src/lib/seed.ts", "src/lib/types.ts", "src/lib/format.ts", "src/lib/pets-query.ts", "src/lib/seed-history.ts", "src/lib/match.ts", "src/lib/audit.ts"]
+  "include": ["server", "src/lib/seed.ts", "src/lib/types.ts", "src/lib/format.ts", "src/lib/pets-query.ts", "src/lib/seed-history.ts", "src/lib/match.ts", "src/lib/audit.ts", "src/lib/fake-door.ts"]
 }

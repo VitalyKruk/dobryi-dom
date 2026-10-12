@@ -24,6 +24,7 @@ import { useAuth } from "@/context/auth"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
 import { formatDate, formatNumber, plural } from "@/lib/format"
+import type { FakeDoorStat } from "@/lib/fake-door"
 import type { Analytics, Insight } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -82,6 +83,26 @@ function Insights({ items }: { items: Insight[] }) {
         })}
       </ul>
     </section>
+  )
+}
+
+/** Фейкдоры: сколько раз нажимали кнопки функций, которых ещё нет, — спрос до разработки */
+function FakeDoors({ items }: { items: FakeDoorStat[] }) {
+  const total = items.reduce((s, x) => s + x.count, 0)
+  const last = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "ещё не нажимали"
+  return (
+    <Panel title="Кнопки в разработке" id="fake-doors-title">
+      <p className="text-sm text-muted-foreground">
+        Оплата доната и соцсети пока ведут на страницу «Раздел в разработке». Переходы показывают, на что есть спрос:
+        {total ? ` всего ${formatNumber(total)} ${plural(total, ["переход", "перехода", "переходов"])}.` : " переходов пока не было."}
+      </p>
+      <HBars
+        items={items.map((x) => ({ label: x.label, value: x.count, hint: last(x.lastAt) }))}
+        max={Math.max(1, ...items.map((x) => x.count))}
+        format={(n) => `${formatNumber(n)} ${plural(n, ["переход", "перехода", "переходов"])}`}
+      />
+    </Panel>
   )
 }
 
@@ -225,13 +246,15 @@ function AnalyticsBlock({ a }: { a: Analytics }) {
 export default function DashboardPage() {
   const { user, can } = useAuth()
   const data = useAsync(async () => {
-    const [stats, apps, pets, analytics] = await Promise.all([
+    const [stats, apps, pets, analytics, fakeDoors] = await Promise.all([
       api.getStats(),
       api.listApplications(),
       api.listAllPets(),
       can("applications.view") ? api.getAnalytics() : Promise.resolve(null),
+      // Переходы по кнопкам в разработке — только администраторам
+      can("users.manage") ? api.getFakeDoorStats() : Promise.resolve(null),
     ])
-    return { stats, apps, pets, analytics, now: Date.now() }
+    return { stats, apps, pets, analytics, fakeDoors, now: Date.now() }
   }, [])
 
   if (data.status === "error") return <ErrorState onRetry={data.reload} />
@@ -279,6 +302,8 @@ export default function DashboardPage() {
           </div>
         )
       )}
+
+      {d?.fakeDoors && <FakeDoors items={d.fakeDoors} />}
 
       <div className="grid gap-6 xl:grid-cols-2">
         {can("applications.view") && (

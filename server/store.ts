@@ -7,6 +7,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { seedApplications, seedPets, seedUsers, seedVolunteers, DEMO_PASSWORD } from "../src/lib/seed.ts"
 import { seedAudit } from "../src/lib/audit.ts"
+import type { FakeDoorCounters } from "../src/lib/fake-door.ts"
 import { buildApplications } from "../src/lib/seed-history.ts"
 import type { Application, AuditEntry, Pet, User, Volunteer } from "../src/lib/types.ts"
 import { hashPassword } from "./auth.ts"
@@ -26,6 +27,8 @@ export type DB = {
   feedback: { name: string; email: string; message: string; at: string }[]
   /** журнал действий, новые записи — в начале */
   audit: AuditEntry[]
+  /** переходы по кнопкам функций в разработке (фейкдоры) */
+  fakeDoors: FakeDoorCounters
   seq: number
 }
 
@@ -45,6 +48,7 @@ export async function seedDb(): Promise<DB> {
     subscribers: [],
     feedback: [],
     audit: seedAudit(applications, seedPets, seedUsers),
+    fakeDoors: {},
     seq,
   })
 }
@@ -66,6 +70,7 @@ export class Store {
       this.data = JSON.parse(await readFile(this.file, "utf8")) as DB
       // db.json, созданный до появления журнала, — начинаем журнал с пустого
       this.data.audit ??= []
+      this.data.fakeDoors ??= {}
       // Демо-аккаунт, добавленный в seed.ts после создания базы, — дописываем, иначе его кнопка входа не сработает
       for (const u of seedUsers) {
         if (this.data.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) continue

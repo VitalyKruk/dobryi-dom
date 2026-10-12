@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/api"
 import HomePage from "@/pages/home"
 import CatalogPage from "@/pages/catalog"
 import MatchPage from "@/pages/match"
+import SoonPage from "@/pages/soon"
 import PetPage from "@/pages/pet"
 import ApplyPage from "@/pages/apply"
 import AboutPage from "@/pages/about"
@@ -75,6 +76,7 @@ const router = createRouter([
           { path: "about", element: <AboutPage /> },
           { path: "help", element: <HelpPage /> },
           { path: "investors", element: <InvestorsPage /> },
+          { path: "soon/:feature", element: <SoonPage /> },
           { path: "contacts", element: <ContactsPage /> },
           { path: "faq", element: <FaqPage /> },
           { path: "privacy", element: <PrivacyPage /> },

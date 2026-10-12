@@ -36,7 +36,8 @@ const items: { to: string; label: string; icon: typeof PawPrint; end?: boolean; 
 function SideNav({ pending }: { pending: number | null }) {
   const { can, user } = useAuth()
   return (
-    <div className="flex h-full flex-col gap-6 p-4">
+    // min-h-full, а не h-full: на низком экране панель вырастает и прокручивается, а не обрезается
+    <div className="flex min-h-full flex-col gap-6 p-4">
       <Logo to="/admin" className="px-2" />
       <nav aria-label="Разделы кабинета" className="flex flex-col gap-1">
         {items
@@ -135,7 +136,7 @@ export function AdminLayout() {
   return (
     <div className="flex min-h-svh">
       <SkipLink />
-      <aside className="sticky top-0 hidden h-svh w-72 shrink-0 bg-secondary lg:block">
+      <aside className="sticky top-0 hidden h-svh w-72 shrink-0 overflow-y-auto overscroll-contain bg-secondary lg:block">
         <SideNav pending={pending} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -146,7 +147,7 @@ export function AdminLayout() {
                 <Menu className="size-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-secondary p-0">
+            <SheetContent side="left" className="w-72 overflow-y-auto overscroll-contain bg-secondary p-0">
               <SheetTitle className="sr-only">Меню кабинета</SheetTitle>
               <SheetDescription className="sr-only">Разделы кабинета сотрудника</SheetDescription>
               <SideNav pending={pending} />

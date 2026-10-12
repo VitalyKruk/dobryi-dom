@@ -326,6 +326,25 @@ describe("журнал действий и логи", () => {
   })
 })
 
+describe("фейкдоры", () => {
+  test("переходы по кнопкам в разработке считаются и видны только администратору", async () => {
+    assert.equal((await api("POST", "/api/fake-doors", { feature: "donate" })).status, 204)
+    assert.equal((await api("POST", "/api/fake-doors", { feature: "donate" })).status, 204)
+    assert.equal((await api("POST", "/api/fake-doors", { feature: "vk" }, await login("anna@example.com"))).status, 204)
+    assert.equal((await api("POST", "/api/fake-doors", { feature: "tiktok" })).status, 400)
+
+    const r = await api("GET", "/api/admin/fake-doors", undefined, await login("svetlana@dobryi-dom.ru"))
+    assert.equal(r.status, 200)
+    const by = Object.fromEntries(r.json.map((x: { feature: string; count: number }) => [x.feature, x.count]))
+    assert.deepEqual(by, { donate: 2, vk: 1, telegram: 0, youtube: 0 })
+    assert.equal(r.json[0].feature, "donate", "больше переходов — выше")
+    assert.ok(r.json[0].lastAt)
+
+    assert.equal((await api("GET", "/api/admin/fake-doors", undefined, await login("ivan@dobryi-dom.ru"))).status, 403)
+    assert.equal((await api("GET", "/api/admin/fake-doors")).status, 401)
+  })
+})
+
 describe("миграция базы", () => {
   test("демо-аккаунт, которого нет в старом db.json, добавляется при запуске", async () => {
     const old = await mkdtemp(path.join(tmpdir(), "dobryi-dom-migrate-"))

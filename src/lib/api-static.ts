@@ -19,6 +19,7 @@ import {
   type PetInput,
   type Stats,
 } from "./api"
+import { fakeDoorStats, recordFakeDoor, type FakeDoor } from "./fake-door"
 import { actorOf, filterAudit, maskEmail, petStatusChange, pushAudit, roleChange, seedAudit, statusChange } from "./audit"
 import { demoMode } from "./demo"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "./match"
@@ -44,6 +45,7 @@ type DB = {
   subscribers: string[]
   feedback: unknown[]
   audit: AuditEntry[]
+  fakeDoors: Partial<Record<FakeDoor, { count: number; lastAt: string }>>
   seq: number
 }
 
@@ -69,6 +71,7 @@ async function seedDb(): Promise<DB> {
     subscribers: [],
     feedback: [],
     audit: seedAudit(applications, seedPets, seedUsers),
+    fakeDoors: {},
     seq,
   })
 }
@@ -84,6 +87,7 @@ async function load(): Promise<DB> {
   memory ??= await seedDb()
   // Данные из браузера, сохранённые до появления журнала
   memory.audit ??= []
+  memory.fakeDoors ??= {}
   // Демо-аккаунт, появившийся после первого открытия страницы, — дописываем, чтобы его кнопка входа работала
   for (const u of seedUsers) {
     if (memory.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) continue
@@ -633,6 +637,23 @@ export function resetDemoData() {
     const sessions = c.d.sessions.filter((x) => fresh.users.some((u) => u.id === x.userId))
     Object.assign(c.d, fresh, { sessions })
     audit(c, { action: "data.reset", target: { type: "data", label: "Демо-данные" } })
+  })
+}
+
+// ——— Фейкдоры ———
+
+/** Без сервера переходы считаются в браузере зрителя — видно, как это выглядит у администратора */
+export function trackFakeDoor(feature: FakeDoor) {
+  void load().then((d) => {
+    recordFakeDoor(d.fakeDoors, feature)
+    persist()
+  })
+}
+
+export function getFakeDoorStats() {
+  return call((c) => {
+    requirePermission(c, "users.manage")
+    return fakeDoorStats(c.empty ? {} : c.d.fakeDoors)
   })
 }
 
