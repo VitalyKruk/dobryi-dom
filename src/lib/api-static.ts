@@ -6,18 +6,29 @@
  * вместо api.ts только в режиме static.
  */
 import { buildAnalytics } from "../../server/analytics.ts"
-import { HttpError, parse } from "../../server/errors.ts"
+import { HttpError, parse } from "../../server/http-error.ts"
 import * as s from "../../server/schemas.ts"
-import { ApiError, getToken, setToken, type MatchQuery, type NewApplication, type PetInput, type Stats } from "./api"
+import {
+  ApiError,
+  getToken,
+  setToken,
+  type AuditQuery,
+  type ClientErrorReport,
+  type MatchQuery,
+  type NewApplication,
+  type PetInput,
+  type Stats,
+} from "./api"
+import { actorOf, filterAudit, maskEmail, petStatusChange, pushAudit, roleChange, seedAudit, statusChange } from "./audit"
 import { demoMode } from "./demo"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "./match"
 import { featuredPets, filtersFromQuery, filtersToQuery, matchesFilters, similarPets, sortPets } from "./pets-query"
 import { ADOPTED_BEFORE_SITE, DEMO_PASSWORD, seedApplications, seedPets, seedUsers, seedVolunteers } from "./seed"
 import { buildApplications } from "./seed-history"
-import type { Application, ApplicationStatus, InvestorReport, Pet, PetFilters, PetStatus, Role, User, Volunteer } from "./types"
+import type { Application, ApplicationStatus, AuditEntry, InvestorReport, Pet, PetFilters, PetStatus, Role, User, Volunteer } from "./types"
 
 export { ApiError, getToken, setToken }
-export type { MatchQuery, NewApplication, PetInput, Stats }
+export type { AuditQuery, ClientErrorReport, MatchQuery, NewApplication, PetInput, Stats }
 
 // ——— Хранилище ———
 
@@ -32,6 +43,7 @@ type DB = {
   volunteerRequests: unknown[]
   subscribers: string[]
   feedback: unknown[]
+  audit: AuditEntry[]
   seq: number
 }
 
@@ -56,6 +68,7 @@ async function seedDb(): Promise<DB> {
     volunteerRequests: [],
     subscribers: [],
     feedback: [],
+    audit: seedAudit(applications, seedPets, seedUsers),
     seq,
   })
 }
@@ -69,6 +82,8 @@ async function load(): Promise<DB> {
     // нет доступа к localStorage или испорченные данные — начинаем с демо-данных
   }
   memory ??= await seedDb()
+  // Данные из браузера, сохранённые до появления журнала
+  memory.audit ??= []
   return memory
 }
 
@@ -110,6 +125,10 @@ function requirePermission(c: Ctx, p: Permission) {
   if (!can(me, p)) throw new HttpError(403, "Недостаточно прав для этого действия")
   return me
 }
+
+/** Запись в журнал действий — как на сервере, но в localStorage зрителя */
+const audit = (c: Ctx, entry: Omit<AuditEntry, "id" | "at" | "actor"> & { actor?: AuditEntry["actor"] }) =>
+  pushAudit(c.d.audit, { actor: actorOf(c.me), ...entry }, crypto.randomUUID())
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const now = () => new Date().toISOString()
@@ -305,6 +324,7 @@ export function savePet(input: PetInput, id?: string) {
     if (!id) {
       const created: Pet = { ...data, id: slugify(data.name, (x) => c.d.pets.some((p) => p.id === x)), addedAt: now() }
       c.d.pets.unshift(created)
+      audit(c, { action: "pet.create", target: { type: "pet", id: created.id, label: created.name } })
       return created
     }
     const i = c.d.pets.findIndex((p) => p.id === id)
@@ -312,6 +332,11 @@ export function savePet(input: PetInput, id?: string) {
     const prev = c.d.pets[i]
     c.d.pets[i] = { ...data, id: prev.id, addedAt: prev.addedAt }
     if (data.status === "adopted") c.d.pets[i].adoptedAt = prev.adoptedAt ?? now()
+    audit(c, {
+      action: "pet.update",
+      target: { type: "pet", id: prev.id, label: data.name },
+      details: prev.status !== data.status ? petStatusChange(prev, prev.status, data.status) : undefined,
+    })
     return c.d.pets[i]
   })
 }
@@ -319,9 +344,10 @@ export function savePet(input: PetInput, id?: string) {
 export function deletePet(id: string) {
   return call((c) => {
     requirePermission(c, "pets.edit")
-    const before = c.d.pets.length
+    const gone = c.d.pets.find((p) => p.id === id)
+    if (!gone) throw new HttpError(404, "Питомец не найден")
     c.d.pets = c.d.pets.filter((p) => p.id !== id)
-    if (c.d.pets.length === before) throw new HttpError(404, "Питомец не найден")
+    audit(c, { action: "pet.delete", target: { type: "pet", id: gone.id, label: gone.name } })
   })
 }
 
@@ -333,6 +359,7 @@ export function setPetStatus(id: string, status: PetStatus) {
     if (!p) throw new HttpError(404, "Питомец не найден")
     if (next === "adopted" && p.status !== "adopted") p.adoptedAt = now()
     if (next !== "adopted") delete p.adoptedAt
+    if (p.status !== next) audit(c, { action: "pet.status", target: { type: "pet", id: p.id, label: p.name }, details: petStatusChange(p, p.status, next) })
     p.status = next
     return p
   })
@@ -374,6 +401,11 @@ export function createApplication(input: NewApplication) {
       createdAt: now(),
     }
     c.d.applications.unshift(app)
+    audit(c, {
+      actor: c.me ? actorOf(c.me) : { name: app.name },
+      action: "application.create",
+      target: { type: "application", id: app.id, label: `${app.id} · ${pet.name}` },
+    })
     return app
   })
 }
@@ -396,12 +428,19 @@ export function updateApplicationStatus(id: string, status: ApplicationStatus) {
     const { status: next } = parse(s.applicationStatusSchema, { status })
     const app = c.d.applications.find((a) => a.id === id)
     if (!app) throw new HttpError(404, "Заявка не найдена")
+    const petName = c.d.pets.find((p) => p.id === app.petId)?.name ?? app.petId
+    if (app.status !== next) {
+      audit(c, { action: "application.status", target: { type: "application", id: app.id, label: `${app.id} · ${petName}` }, details: statusChange(app.status, next) })
+    }
     app.status = next
     if (next === "pending") delete app.decidedAt
     else app.decidedAt = now()
     if (next === "approved") {
       const pet = c.d.pets.find((p) => p.id === app.petId)
-      if (pet?.status === "available") pet.status = "reserved"
+      if (pet?.status === "available") {
+        audit(c, { action: "pet.status", target: { type: "pet", id: pet.id, label: pet.name }, details: petStatusChange(pet, "available", "reserved") })
+        pet.status = "reserved"
+      }
     }
     return app
   })
@@ -414,6 +453,7 @@ export function addStaffComment(id: string, text: string) {
     const app = c.d.applications.find((a) => a.id === id)
     if (!app) throw new HttpError(404, "Заявка не найдена")
     app.staffComments.push({ author: me.name, text: clean, at: now() })
+    audit(c, { action: "application.comment", target: { type: "application", id: app.id, label: app.id } })
     return app
   })
 }
@@ -427,6 +467,7 @@ export function cancelApplication(id: string) {
     if (app.status !== "pending") throw new HttpError(409, "Отозвать можно только заявку на рассмотрении")
     app.status = "cancelled"
     app.decidedAt = now()
+    audit(c, { action: "application.cancel", target: { type: "application", id: app.id, label: app.id } })
     return app
   })
 }
@@ -444,7 +485,12 @@ export async function login(email: string, password: string) {
     const data = parse(s.loginSchema, { email, password })
     const user = c.d.users.find((u) => u.email.toLowerCase() === data.email.toLowerCase())
     const ok = !!user && c.d.passwords[user.email] === (await sha256(data.password))
-    if (!user || !ok) throw new HttpError(401, "Неверный email или пароль. Попробуйте ещё раз или войдите через демо-аккаунт.")
+    if (!user || !ok) {
+      audit(c, { actor: null, action: "auth.login_failed", details: maskEmail(data.email.toLowerCase()) })
+      persist() // call не сохраняет при ошибке, а запись о неудачном входе нужна
+      throw new HttpError(401, "Неверный email или пароль. Попробуйте ещё раз или войдите через демо-аккаунт.")
+    }
+    audit(c, { actor: actorOf(user), action: "auth.login" })
     return { token: startSession(c.d, user.id), user }
   })
   setToken(r.token)
@@ -466,6 +512,7 @@ export async function register(input: { name: string; email: string; password: s
     }
     c.d.users.push(user)
     c.d.passwords[email] = await sha256(data.password)
+    audit(c, { actor: actorOf(user), action: "auth.register", target: { type: "user", id: user.id, label: user.name } })
     return { token: startSession(c.d, user.id), user }
   })
   setToken(r.token)
@@ -528,6 +575,7 @@ export function setUserRole(id: string, role: Role) {
     if (id === me.id) throw new HttpError(400, "Нельзя поменять роль самому себе")
     const u = c.d.users.find((x) => x.id === id)
     if (!u) throw new HttpError(404, "Пользователь не найден")
+    if (u.role !== next) audit(c, { action: "user.role", target: { type: "user", id: u.id, label: u.name }, details: roleChange(u.role, next) })
     u.role = next
     return u
   })
@@ -547,6 +595,7 @@ export function saveVolunteers(volunteers: Volunteer[]) {
     requirePermission(c, "volunteers.manage")
     const { volunteers: list } = parse(s.volunteersSchema, { volunteers })
     c.d.volunteers = list
+    audit(c, { action: "volunteers.update", target: { type: "volunteers", label: `${list.length} волонтёров` } })
     return list
   })
 }
@@ -577,5 +626,23 @@ export function resetDemoData() {
     const fresh = await seedDb()
     const sessions = c.d.sessions.filter((x) => fresh.users.some((u) => u.id === x.userId))
     Object.assign(c.d, fresh, { sessions })
+    audit(c, { action: "data.reset", target: { type: "data", label: "Демо-данные" } })
   })
+}
+
+// ——— Журнал действий и ошибки браузера ———
+
+export function listAudit(q: AuditQuery = {}) {
+  return call((c) => {
+    requirePermission(c, "users.manage")
+    const page = Math.max(1, q.page ?? 1)
+    const pageSize = Math.min(100, Math.max(1, q.pageSize ?? 25))
+    const list = c.empty ? [] : filterAudit(c.d.audit, q.group, q.q)
+    return { items: list.slice((page - 1) * pageSize, page * pageSize), total: list.length }
+  })
+}
+
+/** Сервера нет — ошибку видно только в консоли браузера */
+export function reportClientError(report: ClientErrorReport) {
+  console.warn("[client_error]", report)
 }

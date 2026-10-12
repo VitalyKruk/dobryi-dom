@@ -7,6 +7,7 @@ import { filtersToQuery } from "./pets-query"
 import type { Match, MatchProfile } from "./match"
 import type {
   Analytics,
+  AuditEntry,
   Application,
   ApplicationStatus,
   InvestorReport,
@@ -228,3 +229,40 @@ export const sendVolunteerRequest = (input: { name: string; phone: string; email
 export const subscribe = (email: string) => send<void>("POST", "/subscribe", { email })
 export const sendFeedback = (input: { name: string; email: string; message: string }) => send<void>("POST", "/feedback", input)
 export const resetDemoData = () => send<void>("POST", "/admin/reset")
+
+// ——— Журнал действий и ошибки браузера ———
+
+export type AuditQuery = { group?: string; q?: string; page?: number; pageSize?: number }
+
+export function listAudit(q: AuditQuery = {}) {
+  const p = new URLSearchParams()
+  if (q.group) p.set("group", q.group)
+  if (q.q?.trim()) p.set("q", q.q.trim())
+  p.set("page", String(q.page ?? 1))
+  p.set("pageSize", String(q.pageSize ?? 25))
+  return get<{ items: AuditEntry[]; total: number }>(`/admin/audit?${p}`)
+}
+
+export type ClientErrorReport = {
+  kind: "error" | "unhandledrejection" | "render"
+  message: string
+  stack?: string
+  page?: string
+  release?: string
+}
+
+/**
+ * Отправить ошибку браузера в серверный лог. Никогда не бросает исключений и не показывает
+ * сообщений: отчёт об ошибке не должен порождать новую. keepalive — отчёт уйдёт, даже если
+ * страница в этот момент закрывается.
+ */
+export function reportClientError(report: ClientErrorReport) {
+  try {
+    const headers: Record<string, string> = { "content-type": "application/json" }
+    const token = getToken()
+    if (token) headers.authorization = `Bearer ${token}`
+    void fetch("/api/client-errors", { method: "POST", headers, body: JSON.stringify(report), keepalive: true }).catch(() => {})
+  } catch {
+    // нечего делать: отчёт не ушёл
+  }
+}

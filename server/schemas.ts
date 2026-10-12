@@ -77,6 +77,23 @@ export const recommendationsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(12).default(6),
 })
 
+export const auditQuerySchema = z.object({
+  group: z.enum(["application", "pet", "auth", "user", "volunteers", "data"]).optional(),
+  q: z.string().trim().max(100).optional(),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+})
+
+/** Ошибка из браузера: только то, что нужно для отладки, с ограничением длины */
+export const clientErrorSchema = z.object({
+  kind: z.enum(["error", "unhandledrejection", "render"]),
+  message: z.string().trim().min(1).max(500),
+  stack: z.string().max(4000).optional(),
+  /** путь страницы без query-строки — там могут быть персональные данные */
+  page: z.string().max(300).regex(/^\/[^?#]*$/, { error: "Только путь, без параметров" }).optional(),
+  release: z.string().max(40).optional(),
+})
+
 export const applicationStatusSchema = z.object({
   status: z.enum(["pending", "approved", "rejected", "cancelled"]),
 })

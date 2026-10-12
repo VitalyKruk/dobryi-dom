@@ -147,6 +147,7 @@ step("trivy fs — lock-файл, секреты, Dockerfile и compose", () => 
     "--skip-dirs", "data",
     "--skip-dirs", "dist-static",
     "--skip-dirs", ".static-cache",
+    "--skip-dirs", "logs",
     "--exit-code", "1",
     "--quiet",
     "/src",

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ScrollManager, SiteLayout } from "@/components/layout/site-layout"
 import { RequireAuth } from "@/components/require-auth"
+import { RouteError } from "@/components/route-error"
 import { AuthProvider } from "@/context/auth"
 import { toast } from "sonner"
 import { ApiError } from "@/lib/api"
@@ -28,6 +29,7 @@ const AdminPetsPage = lazy(() => import("@/pages/admin/pets"))
 const PetFormPage = lazy(() => import("@/pages/admin/pet-form"))
 const AdminApplicationsPage = lazy(() => import("@/pages/admin/applications"))
 const AdminVolunteersPage = lazy(() => import("@/pages/admin/volunteers"))
+const AdminAuditPage = lazy(() => import("@/pages/admin/audit"))
 
 // Страховка: если действие не обработало ошибку API само, пользователь всё равно увидит понятное сообщение
 window.addEventListener("unhandledrejection", (e) => {
@@ -59,6 +61,8 @@ const createRouter = import.meta.env.VITE_STATIC === "1" ? createMemoryRouter : 
 const router = createRouter([
   {
     element: <Root />,
+    // Сбой отрисовки любой страницы — понятный экран и запись в серверный лог
+    errorElement: <RouteError />,
     children: [
       {
         element: <SiteLayout />,
@@ -129,6 +133,14 @@ const router = createRouter([
             element: (
               <RequireAuth permission="volunteers.manage">
                 <AdminVolunteersPage />
+              </RequireAuth>
+            ),
+          },
+          {
+            path: "audit",
+            element: (
+              <RequireAuth permission="users.manage">
+                <AdminAuditPage />
               </RequireAuth>
             ),
           },

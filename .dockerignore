@@ -10,3 +10,4 @@ compose.yaml
 data
 dist-static
 .static-cache
+logs
