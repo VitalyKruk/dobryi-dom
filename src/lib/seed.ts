@@ -262,32 +262,32 @@ export const seedPets: Pet[] = [
   pet({
     id: "leva", name: "Лёва", species: "cat", sex: "male", months: 30, breed: "Беспородный", size: "medium", coat: "short", weightKg: 5,
     photo: "1543852786-1cf6624b9987", focus: [0.45, 0.3, 1], traits: ["Весёлый"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Лёва уехал домой к семье Кравцовых.", careNotes: "", status: "adopted", added: 90, adopted: 18,
+    story: "Лёва уехал домой к семье Кравцовых.", careNotes: "", status: "adopted", added: 73, adopted: 18,
   }),
   pet({
     id: "sonya", name: "Соня", species: "cat", sex: "female", months: 20, breed: "Беспородная", size: "medium", coat: "short", weightKg: 3.8,
     photo: "1541781774459-bb2af2f05b55", focus: [0.47, 0.55, 1.6], traits: ["Соня"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "unknown",
-    story: "Соня нашла дом и теперь спит на подоконнике с видом на парк.", careNotes: "", status: "adopted", added: 150, adopted: 58,
+    story: "Соня нашла дом и теперь спит на подоконнике с видом на парк.", careNotes: "", status: "adopted", added: 122, adopted: 58,
   }),
   pet({
     id: "charli", name: "Чарли", species: "dog", sex: "male", months: 40, breed: "Йоркширский терьер (метис)", size: "small", coat: "long", weightKg: 4,
     photo: "1548199973-03cce0bbc87b", focus: [0.6, 0.38, 1.3], traits: ["Весёлый"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Чарли уехал домой вместе с лучшей подругой.", careNotes: "", status: "adopted", added: 200, adopted: 86,
+    story: "Чарли уехал домой вместе с лучшей подругой.", careNotes: "", status: "adopted", added: 144, adopted: 86,
   }),
   pet({
     id: "nika", name: "Ника", species: "dog", sex: "female", months: 8, breed: "Ретривер (метис)", size: "large", coat: "long", weightKg: 14,
     photo: "1576201836106-db1758fd1c97", focus: [0.55, 0.5, 2], traits: ["Игривая"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Ника теперь живёт в загородном доме.", careNotes: "", status: "adopted", added: 100, adopted: 31,
+    story: "Ника теперь живёт в загородном доме.", careNotes: "", status: "adopted", added: 93, adopted: 31,
   }),
   pet({
     id: "bonya", name: "Боня", species: "dog", sex: "female", months: 34, breed: "Французский бульдог", size: "small", coat: "short", weightKg: 11,
     photo: "1583337130417-3346a1be7dee", focus: [0.62, 0.45, 1], traits: ["Модница"], goodWithKids: "yes", goodWithCats: "yes", goodWithDogs: "yes",
-    story: "Боня уехала домой в новом жёлтом худи.", careNotes: "", status: "adopted", added: 130, adopted: 44,
+    story: "Боня уехала домой в новом жёлтом худи.", careNotes: "", status: "adopted", added: 101, adopted: 44,
   }),
   pet({
     id: "keks", name: "Кекс", species: "dog", sex: "male", months: 18, breed: "Французский бульдог", size: "small", coat: "short", weightKg: 12,
     photo: "1598133894008-61f7fdb8cc3a", focus: [0.42, 0.6, 1.1], traits: ["Дружелюбный"], goodWithKids: "yes", goodWithCats: "unknown", goodWithDogs: "yes",
-    story: "Кекс нашёл дом и лучшего друга — восьмилетнего Тёму.", careNotes: "", status: "adopted", added: 160, adopted: 71,
+    story: "Кекс нашёл дом и лучшего друга — восьмилетнего Тёму.", careNotes: "", status: "adopted", added: 135, adopted: 71,
   }),
 ]
 
@@ -311,6 +311,11 @@ export const seedUsers: User[] = [
   {
     id: "u-olga", name: "Ольга Васильева", email: "olga@dobryi-dom.ru", phone: "+7 (900) 111-22-33", city: "Санкт-Петербург",
     role: "admin", favorites: [], notify: { newPets: false, applicationUpdates: true, email: true },
+  },
+  // Второй администратор: по PRD карточки и заявки ведут двое
+  {
+    id: "u-svetlana", name: "Светлана Орлова", email: "svetlana@dobryi-dom.ru", phone: "+7 (921) 444-55-66", city: "Санкт-Петербург",
+    role: "admin", favorites: [], notify: { newPets: true, applicationUpdates: true, email: true },
   },
 ]
 

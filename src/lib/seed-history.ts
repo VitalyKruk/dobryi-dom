@@ -89,6 +89,8 @@ type NewApplication = Omit<Application, "id">
 
 export function buildApplications(recent: NewApplication[], now = Date.now(), pets: Pet[] = seedPets) {
   const rnd = mulberry32(20_160_401) // день основания приюта
+  // Сколько заявок в день — отдельный поток: правки питомцев и анкет не меняют объём и тренд заявок
+  const countRnd = mulberry32(20_160_402)
   const pick = <T,>(list: readonly T[]) => list[Math.floor(rnd() * list.length)]
   const chance = (p: number) => rnd() < p
   const between = (a: number, b: number) => a + rnd() * (b - a)
@@ -178,7 +180,7 @@ export function buildApplications(recent: NewApplication[], now = Date.now(), pe
     const rate = growth * (weekday === 0 || weekday === 6 ? 1.5 : 0.85) * (d < RECENT_DAYS ? 0.45 : 1)
     let n = 0
     // Пуассон по Кнуту
-    for (let L = Math.exp(-rate), p = rnd(); p > L; p *= rnd()) n++
+    for (let L = Math.exp(-rate), p = countRnd(); p > L; p *= countRnd()) n++
     for (let i = 0; i < n; i++) {
       const createdDaysAgo = d - rnd() * 0.9
       const candidates = pets.filter(

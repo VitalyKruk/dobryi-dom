@@ -84,6 +84,12 @@ async function load(): Promise<DB> {
   memory ??= await seedDb()
   // Данные из браузера, сохранённые до появления журнала
   memory.audit ??= []
+  // Демо-аккаунт, появившийся после первого открытия страницы, — дописываем, чтобы его кнопка входа работала
+  for (const u of seedUsers) {
+    if (memory.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) continue
+    memory.users.push(structuredClone(u))
+    memory.passwords[u.email] = await sha256(DEMO_PASSWORD)
+  }
   return memory
 }
 
