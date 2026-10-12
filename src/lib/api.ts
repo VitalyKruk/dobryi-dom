@@ -3,6 +3,7 @@
  * Запросы идут на /api того же домена: в разработке их проксирует Vite, в Docker — nginx.
  */
 import { demoMode } from "./demo"
+import type { FakeDoor, FakeDoorStat } from "./fake-door"
 import { filtersToQuery } from "./pets-query"
 import type { Match, MatchProfile } from "./match"
 import type {
@@ -229,6 +230,25 @@ export const sendVolunteerRequest = (input: { name: string; phone: string; email
 export const subscribe = (email: string) => send<void>("POST", "/subscribe", { email })
 export const sendFeedback = (input: { name: string; email: string; message: string }) => send<void>("POST", "/feedback", input)
 export const resetDemoData = () => send<void>("POST", "/admin/reset")
+
+// ——— Фейкдоры: кнопки функций в разработке ———
+
+/**
+ * Засчитать переход по кнопке функции в разработке. Не ждём ответа и не показываем ошибок:
+ * человек в любом случае попадает на страницу «в разработке». keepalive — запрос уйдёт и при переходе.
+ */
+export function trackFakeDoor(feature: FakeDoor) {
+  try {
+    const headers: Record<string, string> = { "content-type": "application/json" }
+    const token = getToken()
+    if (token) headers.authorization = `Bearer ${token}`
+    void fetch("/api/fake-doors", { method: "POST", headers, body: JSON.stringify({ feature }), keepalive: true }).catch(() => {})
+  } catch {
+    // счётчик не увеличился — не страшно
+  }
+}
+
+export const getFakeDoorStats = () => get<FakeDoorStat[]>("/admin/fake-doors")
 
 // ——— Журнал действий и ошибки браузера ———
 

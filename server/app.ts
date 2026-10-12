@@ -14,6 +14,7 @@ import { buildAnalytics } from "./analytics.ts"
 import { authenticate, can, hashPassword, hashToken, newToken, requirePermission, requireUser, verifyPassword } from "./auth.ts"
 import { errorHandler, HttpError, parse } from "./errors.ts"
 import { log, requestLogger } from "./logger.ts"
+import { fakeDoorStats, recordFakeDoor } from "../src/lib/fake-door.ts"
 import { actorOf, filterAudit, maskEmail, petStatusChange, pushAudit, roleChange, statusChange } from "../src/lib/audit.ts"
 import * as s from "./schemas.ts"
 import type { DB, Store } from "./store.ts"
@@ -592,6 +593,30 @@ export function createApp(store: Store) {
     const q = parse(s.auditQuerySchema, req.query)
     const list = demoEmpty(req) ? [] : filterAudit(db().audit, q.group, q.q)
     res.json({ items: list.slice((q.page - 1) * q.pageSize, q.page * q.pageSize), total: list.length })
+  })
+
+  // ——— Фейкдоры: кнопки функций в разработке ———
+  // Переход по кнопке оплаты или соцсети считается здесь; администратор видит, на что есть спрос.
+  // Ограничение частоты по IP — чтобы счётчик нельзя было накрутить скриптом.
+
+  const fakeDoorHits = new Map<string, { count: number; since: number }>()
+  app.post("/api/fake-doors", async (req, res) => {
+    const { feature } = parse(s.fakeDoorSchema, req.body)
+    const ip = req.ip ?? "unknown"
+    const nowMs = Date.now()
+    const hit = fakeDoorHits.get(ip)
+    if (!hit || nowMs - hit.since > 60_000) fakeDoorHits.set(ip, { count: 1, since: nowMs })
+    else if (++hit.count > 30) throw new HttpError(429, "Слишком много переходов, попробуйте позже")
+    if (fakeDoorHits.size > 10_000) fakeDoorHits.clear()
+    await store.write((d) => recordFakeDoor(d.fakeDoors, feature))
+    log("info", "fake_door", { id: req.id, feature, role: req.user?.role ?? "guest" })
+    res.status(204).end()
+  })
+
+  /** Сколько раз нажимали кнопки функций в разработке — только администратору */
+  app.get("/api/admin/fake-doors", (req, res) => {
+    requirePermission(req, "users.manage")
+    res.json(fakeDoorStats(demoEmpty(req) ? {} : db().fakeDoors))
   })
 
   // ——— Ошибки из браузера ———

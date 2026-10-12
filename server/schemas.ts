@@ -94,6 +94,8 @@ export const clientErrorSchema = z.object({
   release: z.string().max(40).optional(),
 })
 
+export const fakeDoorSchema = z.object({ feature: z.enum(["donate", "vk", "telegram", "youtube"]) })
+
 export const applicationStatusSchema = z.object({
   status: z.enum(["pending", "approved", "rejected", "cancelled"]),
 })

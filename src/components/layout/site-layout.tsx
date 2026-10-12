@@ -273,20 +273,23 @@ function Footer() {
             Приют для кошек и собак в Санкт-Петербурге. С 2016 года помогаем хвостам найти свой дом.
           </p>
           <div className="flex gap-2">
-            {[
-              { label: "ВКонтакте", short: "VK" },
-              { label: "Telegram", short: "TG" },
-              { label: "YouTube", short: "YT" },
-            ].map((s) => (
-              <a
+            {/* Страниц в соцсетях ещё нет — фейкдор: считаем интерес и показываем «в разработке» */}
+            {(
+              [
+                { feature: "vk", label: "ВКонтакте", short: "VK" },
+                { feature: "telegram", label: "Telegram", short: "TG" },
+                { feature: "youtube", label: "YouTube", short: "YT" },
+              ] as const
+            ).map((s) => (
+              <Link
                 key={s.short}
-                href="#"
-                onClick={(e) => e.preventDefault()}
+                to={`/soon/${s.feature}`}
+                onClick={() => api.trackFakeDoor(s.feature)}
                 aria-label={`Мы в ${s.label}`}
                 className="flex size-10 items-center justify-center rounded-lg bg-card text-xs font-bold text-secondary-foreground transition hover:bg-accent"
               >
                 {s.short}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
