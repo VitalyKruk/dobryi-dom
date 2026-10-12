@@ -6,6 +6,9 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { after, before, describe, test } from "node:test"
 import { createApp } from "./app.ts"
+
+// Логи запросов в выводе тестов только мешают; LOG_LEVEL=info npm run test:api — чтобы увидеть
+process.env.LOG_LEVEL ??= "silent"
 import { Store } from "./store.ts"
 
 let base = ""
@@ -37,7 +40,7 @@ async function api(method: string, url: string, body?: unknown, token?: string, 
     body: body === undefined ? undefined : body instanceof Uint8Array ? new Blob([body as Uint8Array<ArrayBuffer>]) : JSON.stringify(body),
   })
   const text = await res.text()
-  return { status: res.status, json: text ? JSON.parse(text) : null }
+  return { status: res.status, json: text ? JSON.parse(text) : null, requestId: res.headers.get("x-request-id") }
 }
 
 const login = async (email: string) => (await api("POST", "/api/auth/login", { email, password: "demo1234" })).json.token as string
@@ -283,6 +286,42 @@ describe("питомцы в админке и загрузка фото", () => 
     const r = await api("PUT", "/api/pets/pushok", { ...body, photos: ["https://evil.example/x.jpg"] }, admin)
     assert.equal(r.status, 400)
     assert.equal(r.json.fields["photos.0"], "Фото должно быть загружено через форму")
+  })
+})
+
+describe("журнал действий и логи", () => {
+  test("действия попадают в журнал, журнал — только администратору", async () => {
+    const olga = await login("olga@dobryi-dom.ru")
+    const created = await api("POST", "/api/applications", { ...application, petId: "zefir", email: "audit@example.com" })
+    await api("PATCH", `/api/applications/${created.json.id}/status`, { status: "rejected" }, olga)
+    await api("POST", "/api/auth/login", { email: "olga@dobryi-dom.ru", password: "не тот" })
+
+    const r = await api("GET", "/api/admin/audit?pageSize=10", undefined, olga)
+    assert.equal(r.status, 200)
+    const actions = r.json.items.map((e: { action: string }) => e.action)
+    assert.ok(actions.includes("application.status") && actions.includes("application.create") && actions.includes("auth.login_failed"))
+    const failed = r.json.items.find((e: { action: string }) => e.action === "auth.login_failed")
+    assert.equal(failed.details, "o***@dobryi-dom.ru", "email в журнале маскируется")
+    const decision = r.json.items.find((e: { action: string }) => e.action === "application.status")
+    assert.equal(decision.actor.name, "Ольга Васильева")
+    assert.ok(r.json.total > 100, "стартовая история из демо-данных")
+
+    const apps = await api("GET", "/api/admin/audit?group=application&q=" + encodeURIComponent(created.json.id), undefined, olga)
+    assert.ok(apps.json.items.length >= 2 && apps.json.items.every((e: { action: string }) => e.action.startsWith("application.")))
+    assert.equal((await api("GET", "/api/admin/audit", undefined, await login("ivan@dobryi-dom.ru"))).status, 403)
+    assert.equal((await api("GET", "/api/admin/audit?group=nope", undefined, olga)).status, 400)
+  })
+
+  test("ошибки из браузера принимаются, query-строка и мусор — нет", async () => {
+    const ok = await api("POST", "/api/client-errors", { kind: "error", message: "TypeError: x is undefined", page: "/catalog" })
+    assert.equal(ok.status, 204)
+    assert.equal((await api("POST", "/api/client-errors", { kind: "error", message: "x", page: "/catalog?q=Анна" })).status, 400)
+    assert.equal((await api("POST", "/api/client-errors", { kind: "hack", message: "x" })).status, 400)
+  })
+
+  test("у каждого ответа есть X-Request-Id", async () => {
+    const r = await api("GET", "/api/pets/count")
+    assert.match(r.requestId ?? "", /^[0-9a-f-]{36}$/)
   })
 })
 

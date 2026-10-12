@@ -6,8 +6,9 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { seedApplications, seedPets, seedUsers, seedVolunteers, DEMO_PASSWORD } from "../src/lib/seed.ts"
+import { seedAudit } from "../src/lib/audit.ts"
 import { buildApplications } from "../src/lib/seed-history.ts"
-import type { Application, Pet, User, Volunteer } from "../src/lib/types.ts"
+import type { Application, AuditEntry, Pet, User, Volunteer } from "../src/lib/types.ts"
 import { hashPassword } from "./auth.ts"
 
 export type Session = { token: string; userId: string; createdAt: string }
@@ -23,6 +24,8 @@ export type DB = {
   volunteerRequests: { name: string; phone: string; email: string; direction: string; days: string[]; at: string }[]
   subscribers: string[]
   feedback: { name: string; email: string; message: string; at: string }[]
+  /** журнал действий, новые записи — в начале */
+  audit: AuditEntry[]
   seq: number
 }
 
@@ -41,6 +44,7 @@ export async function seedDb(): Promise<DB> {
     volunteerRequests: [],
     subscribers: [],
     feedback: [],
+    audit: seedAudit(applications, seedPets, seedUsers),
     seq,
   })
 }
@@ -60,6 +64,8 @@ export class Store {
     await mkdir(this.uploadsDir, { recursive: true })
     try {
       this.data = JSON.parse(await readFile(this.file, "utf8")) as DB
+      // db.json, созданный до появления журнала, — начинаем журнал с пустого
+      this.data.audit ??= []
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e
       this.data = await seedDb()

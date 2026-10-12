@@ -9,12 +9,14 @@ import express, { type Request } from "express"
 import { ADOPTED_BEFORE_SITE } from "../src/lib/seed.ts"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "../src/lib/match.ts"
 import { featuredPets, filtersFromQuery, matchesFilters, similarPets, sortPets } from "../src/lib/pets-query.ts"
-import type { Application, InvestorReport, Pet, Species, User } from "../src/lib/types.ts"
+import type { Application, AuditEntry, InvestorReport, Pet, Species, User } from "../src/lib/types.ts"
 import { buildAnalytics } from "./analytics.ts"
 import { authenticate, can, hashPassword, hashToken, newToken, requirePermission, requireUser, verifyPassword } from "./auth.ts"
 import { errorHandler, HttpError, parse } from "./errors.ts"
+import { log, requestLogger } from "./logger.ts"
+import { actorOf, filterAudit, maskEmail, petStatusChange, pushAudit, roleChange, statusChange } from "../src/lib/audit.ts"
 import * as s from "./schemas.ts"
-import type { Store } from "./store.ts"
+import type { DB, Store } from "./store.ts"
 
 const now = () => new Date().toISOString()
 
@@ -56,10 +58,16 @@ export function createApp(store: Store) {
   const app = express()
   app.disable("x-powered-by")
   app.set("trust proxy", "loopback")
+  // Первым — чтобы в лог попадали и запросы, упавшие на разборе JSON
+  app.use(requestLogger())
   app.use(express.json({ limit: "200kb" }))
   app.use(authenticate(store))
 
   const db = () => store.db
+
+  /** Запись в журнал действий — внутри store.write, вместе с самим изменением */
+  const audit = (d: DB, req: Request, entry: Omit<AuditEntry, "id" | "at" | "actor"> & { actor?: AuditEntry["actor"] }) =>
+    pushAudit(d.audit, { actor: actorOf(req.user), ...entry }, randomBytes(8).toString("hex"))
 
   // Демо-режим интерфейса (?demo=…): заголовок X-Demo от клиента.
   // error — настоящий HTTP 503, slow — задержка, empty — пустые списки.
@@ -121,6 +129,7 @@ export function createApp(store: Store) {
     const pet = await store.write((d) => {
       const created: Pet = { ...input, id: slugify(input.name, (id) => d.pets.some((p) => p.id === id)), addedAt: now() }
       d.pets.unshift(created)
+      audit(d, req, { action: "pet.create", target: { type: "pet", id: created.id, label: created.name } })
       return created
     })
     res.status(201).json(pet)
@@ -135,6 +144,11 @@ export function createApp(store: Store) {
       const prev = d.pets[i]
       d.pets[i] = { ...input, id: prev.id, addedAt: prev.addedAt }
       if (input.status === "adopted") d.pets[i].adoptedAt = prev.adoptedAt ?? now()
+      audit(d, req, {
+        action: "pet.update",
+        target: { type: "pet", id: prev.id, label: input.name },
+        details: prev.status !== input.status ? petStatusChange(prev, prev.status, input.status) : undefined,
+      })
       return d.pets[i]
     })
     res.json(pet)
@@ -148,6 +162,9 @@ export function createApp(store: Store) {
       if (!p) throw new HttpError(404, "Питомец не найден")
       if (status === "adopted" && p.status !== "adopted") p.adoptedAt = now()
       if (status !== "adopted") delete p.adoptedAt
+      if (p.status !== status) {
+        audit(d, req, { action: "pet.status", target: { type: "pet", id: p.id, label: p.name }, details: petStatusChange(p, p.status, status) })
+      }
       p.status = status
       return p
     })
@@ -157,9 +174,10 @@ export function createApp(store: Store) {
   app.delete("/api/pets/:id", async (req, res) => {
     requirePermission(req, "pets.edit")
     await store.write((d) => {
-      const before = d.pets.length
-      d.pets = d.pets.filter((p) => p.id !== req.params.id)
-      if (d.pets.length === before) throw new HttpError(404, "Питомец не найден")
+      const gone = d.pets.find((p) => p.id === req.params.id)
+      if (!gone) throw new HttpError(404, "Питомец не найден")
+      d.pets = d.pets.filter((p) => p.id !== gone.id)
+      audit(d, req, { action: "pet.delete", target: { type: "pet", id: gone.id, label: gone.name } })
     })
     res.status(204).end()
   })
@@ -324,6 +342,12 @@ export function createApp(store: Store) {
         createdAt: now(),
       }
       d.applications.unshift(app)
+      // Гость тоже попадает в журнал — по имени из анкеты
+      audit(d, req, {
+        actor: req.user ? actorOf(req.user) : { name: app.name },
+        action: "application.create",
+        target: { type: "application", id: app.id, label: `${app.id} · ${pet.name}` },
+      })
       return app
     })
     res.status(201).json(created)
@@ -346,13 +370,24 @@ export function createApp(store: Store) {
     const updated = await store.write((d) => {
       const app = d.applications.find((a) => a.id === req.params.id)
       if (!app) throw new HttpError(404, "Заявка не найдена")
+      const petName = d.pets.find((p) => p.id === app.petId)?.name ?? app.petId
+      if (app.status !== status) {
+        audit(d, req, {
+          action: "application.status",
+          target: { type: "application", id: app.id, label: `${app.id} · ${petName}` },
+          details: statusChange(app.status, status),
+        })
+      }
       app.status = status
       if (status === "pending") delete app.decidedAt
       else app.decidedAt = now()
       // Бизнес-правило: одобрение бронирует питомца
       if (status === "approved") {
         const pet = d.pets.find((p) => p.id === app.petId)
-        if (pet?.status === "available") pet.status = "reserved"
+        if (pet?.status === "available") {
+          audit(d, req, { action: "pet.status", target: { type: "pet", id: pet.id, label: pet.name }, details: petStatusChange(pet, "available", "reserved") })
+          pet.status = "reserved"
+        }
       }
       return app
     })
@@ -369,6 +404,7 @@ export function createApp(store: Store) {
       if (app.status !== "pending") throw new HttpError(409, "Отозвать можно только заявку на рассмотрении")
       app.status = "cancelled"
       app.decidedAt = now()
+      audit(d, req, { action: "application.cancel", target: { type: "application", id: app.id, label: app.id } })
       return app
     })
     res.json(updated)
@@ -381,6 +417,7 @@ export function createApp(store: Store) {
       const app = d.applications.find((a) => a.id === req.params.id)
       if (!app) throw new HttpError(404, "Заявка не найдена")
       app.staffComments.push({ author: user.name, text, at: now() })
+      audit(d, req, { action: "application.comment", target: { type: "application", id: app.id, label: app.id } })
       return app
     })
     res.status(201).json(updated)
@@ -401,8 +438,14 @@ export function createApp(store: Store) {
     const { email, password } = parse(s.loginSchema, req.body)
     const user = db().users.find((u) => u.email.toLowerCase() === email.toLowerCase())
     const ok = await verifyPassword(password, user && db().passwords[user.email])
-    if (!user || !ok) throw new HttpError(401, "Неверный email или пароль. Попробуйте ещё раз или войдите через демо-аккаунт.")
-    res.json({ token: await startSession(user.id), user })
+    if (!user || !ok) {
+      // Серия неудачных входов в журнале — повод проверить, не подбирают ли пароль
+      await store.write((d) => audit(d, req, { actor: null, action: "auth.login_failed", details: maskEmail(email.toLowerCase()) }))
+      throw new HttpError(401, "Неверный email или пароль. Попробуйте ещё раз или войдите через демо-аккаунт.")
+    }
+    const token = await startSession(user.id)
+    await store.write((d) => audit(d, req, { actor: actorOf(user), action: "auth.login" }))
+    res.json({ token, user })
   })
 
   app.post("/api/auth/register", async (req, res) => {
@@ -423,6 +466,7 @@ export function createApp(store: Store) {
       }
       d.users.push(u)
       d.passwords[email] = hash
+      audit(d, req, { actor: actorOf(u), action: "auth.register", target: { type: "user", id: u.id, label: u.name } })
       return u
     })
     res.status(201).json({ token: await startSession(user.id), user })
@@ -485,6 +529,9 @@ export function createApp(store: Store) {
     const user = await store.write((d) => {
       const u = d.users.find((x) => x.id === req.params.id)
       if (!u) throw new HttpError(404, "Пользователь не найден")
+      if (u.role !== role) {
+        audit(d, req, { action: "user.role", target: { type: "user", id: u.id, label: u.name }, details: roleChange(u.role, role) })
+      }
       u.role = role
       return u
     })
@@ -501,6 +548,7 @@ export function createApp(store: Store) {
     const { volunteers } = parse(s.volunteersSchema, req.body)
     await store.write((d) => {
       d.volunteers = volunteers
+      audit(d, req, { action: "volunteers.update", target: { type: "volunteers", label: `${volunteers.length} волонтёров` } })
     })
     res.json(volunteers)
   })
@@ -533,6 +581,42 @@ export function createApp(store: Store) {
   app.post("/api/admin/reset", async (req, res) => {
     requirePermission(req, "users.manage")
     await store.reset()
+    await store.write((d) => audit(d, req, { action: "data.reset", target: { type: "data", label: "Демо-данные" } }))
+    log("warn", "data_reset", { id: req.id, userId: req.user?.id })
+    res.status(204).end()
+  })
+
+  /** Журнал действий: кто и что менял. Только администратору — там видны имена и роли */
+  app.get("/api/admin/audit", (req, res) => {
+    requirePermission(req, "users.manage")
+    const q = parse(s.auditQuerySchema, req.query)
+    const list = demoEmpty(req) ? [] : filterAudit(db().audit, q.group, q.q)
+    res.json({ items: list.slice((q.page - 1) * q.pageSize, q.page * q.pageSize), total: list.length })
+  })
+
+  // ——— Ошибки из браузера ———
+  // Фронтенд присылает сюда необработанные ошибки — они попадают в серверный лог.
+  // Ограничение частоты по IP: сломанная страница в цикле не должна заваливать лог.
+
+  const clientErrorHits = new Map<string, { count: number; since: number }>()
+  app.post("/api/client-errors", (req, res) => {
+    const ip = req.ip ?? "unknown"
+    const nowMs = Date.now()
+    const hit = clientErrorHits.get(ip)
+    if (!hit || nowMs - hit.since > 60_000) clientErrorHits.set(ip, { count: 1, since: nowMs })
+    else if (++hit.count > 20) throw new HttpError(429, "Слишком много сообщений об ошибках")
+    if (clientErrorHits.size > 10_000) clientErrorHits.clear()
+    const e = parse(s.clientErrorSchema, req.body)
+    log("warn", "client_error", {
+      id: req.id,
+      kind: e.kind,
+      message: e.message,
+      stack: e.stack,
+      page: e.page,
+      release: e.release,
+      role: req.user?.role ?? "guest",
+      userAgent: req.get("user-agent")?.slice(0, 200),
+    })
     res.status(204).end()
   })
 

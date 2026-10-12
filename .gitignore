@@ -32,3 +32,6 @@ data
 # Статическая версия (npm run build:static) и кеш скачанных фото
 dist-static
 .static-cache
+
+# Журнал действий Claude Code (scripts/log-claude-action.mjs) — локальный, в git не нужен
+logs

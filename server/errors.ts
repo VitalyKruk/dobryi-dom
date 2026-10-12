@@ -1,31 +1,11 @@
 import type { NextFunction, Request, Response } from "express"
-import { z } from "zod"
+import { HttpError } from "./http-error.ts"
+import { log } from "./logger.ts"
 
-/** Ошибка с HTTP-статусом и понятным пользователю сообщением */
-export class HttpError extends Error {
-  status: number
-  fields?: Record<string, string>
-  constructor(status: number, message: string, fields?: Record<string, string>) {
-    super(message)
-    this.status = status
-    this.fields = fields
-  }
-}
-
-/** Проверка входных данных: при ошибке — 400 с текстом по каждому полю */
-export function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
-  const r = schema.safeParse(data)
-  if (r.success) return r.data
-  const fields: Record<string, string> = {}
-  for (const issue of r.error.issues) {
-    const key = issue.path.join(".") || "_"
-    fields[key] ??= issue.message
-  }
-  throw new HttpError(400, "Проверьте введённые данные", fields)
-}
+export { HttpError, parse } from "./http-error.ts"
 
 // Express 5 сам передаёт ошибки из async-обработчиков сюда
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message, fields: err.fields })
     return
@@ -45,6 +25,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(e.status).json({ error: e.status === 404 ? "Не найдено" : "Некорректный запрос" })
     return
   }
-  console.error(err)
-  res.status(500).json({ error: "Что-то пошло не так на сервере. Попробуйте ещё раз." })
+  // Непредвиденная ошибка: в лог — стек и id запроса, пользователю — id, чтобы по нему найти запись
+  const e2 = err instanceof Error ? err : new Error(String(err))
+  log("error", "unhandled_error", { id: req.id, method: req.method, path: req.path, error: e2.message, stack: e2.stack })
+  res.status(500).json({ error: "Что-то пошло не так на сервере. Попробуйте ещё раз.", requestId: req.id })
 }

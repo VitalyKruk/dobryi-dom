@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
-import { ClipboardList, ExternalLink, LayoutDashboard, Menu, PawPrint, RotateCcw, Users } from "lucide-react"
+import { ClipboardList, ExternalLink, History, LayoutDashboard, Menu, PawPrint, RotateCcw, Users } from "lucide-react"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -30,6 +30,7 @@ const items: { to: string; label: string; icon: typeof PawPrint; end?: boolean; 
   { to: "/admin/pets", label: "Питомцы", icon: PawPrint },
   { to: "/admin/applications", label: "Заявки", icon: ClipboardList, permission: "applications.view" },
   { to: "/admin/volunteers", label: "Волонтёры и роли", icon: Users, permission: "volunteers.manage" },
+  { to: "/admin/audit", label: "Журнал действий", icon: History, permission: "users.manage" },
 ]
 
 function SideNav({ pending }: { pending: number | null }) {

@@ -168,3 +168,32 @@ export type InvestorReport = {
   funnel: Analytics["funnel"]
   species: Analytics["species"]
 }
+
+// ——— Журнал действий (аудит) ———
+
+export type AuditAction =
+  | "auth.login"
+  | "auth.login_failed"
+  | "auth.register"
+  | "application.create"
+  | "application.status"
+  | "application.comment"
+  | "application.cancel"
+  | "pet.create"
+  | "pet.update"
+  | "pet.delete"
+  | "pet.status"
+  | "user.role"
+  | "volunteers.update"
+  | "data.reset"
+
+export type AuditEntry = {
+  id: string
+  at: string
+  /** кто сделал; null — гость или неудачный вход */
+  actor: { id?: string; name: string; role?: Role } | null
+  action: AuditAction
+  target?: { type: "pet" | "application" | "user" | "volunteers" | "data"; id?: string; label?: string }
+  /** коротко, что изменилось: «на рассмотрении → одобрена» */
+  details?: string
+}
