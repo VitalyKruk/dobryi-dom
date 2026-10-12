@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HappyHeart } from "@/components/illustrations"
-import { FAKE_DOORS, isFakeDoor } from "@/lib/fake-door"
+import { FAKE_DOORS, fakeDoorThanks, isFakeDoor } from "@/lib/fake-door"
 import NotFoundPage from "./not-found"
 
 /**
@@ -26,7 +26,7 @@ export default function SoonPage() {
         Данный раздел находится в разработке
       </h1>
       <p className="max-w-xl text-lg leading-7 text-muted-foreground">
-        Спасибо, что заинтересовались. В скором времени сервис заработает.
+        {fakeDoorThanks(feature)} В скором времени сервис заработает.
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         <Button size="lg" variant="secondary" onClick={() => navigate(-1)}>
