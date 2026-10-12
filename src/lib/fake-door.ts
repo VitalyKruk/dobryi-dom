@@ -12,6 +12,15 @@ export const FAKE_DOORS = {
 
 export type FakeDoor = keyof typeof FAKE_DOORS
 
+/** Текст под заголовком «Данный раздел находится в разработке» — свой для каждой кнопки */
+export const FAKE_DOOR_MESSAGES: Record<FakeDoor, string> = {
+  donate: "Спасибо, что решили помочь нам. В скором времени сервис заработает.",
+  vk: "Спасибо, что заинтересовались нашими хвостиками. В скором времени сервис заработает.",
+  telegram: "Спасибо, что заинтересовались нашими хвостиками. В скором времени сервис заработает.",
+  youtube:
+    "Спасибо, что заинтересовались нашими хвостиками. В скором времени сервис заработает, и вы сможете посмотреть на их жизнь в нашем приюте.",
+}
+
 export const FAKE_DOOR_IDS = Object.keys(FAKE_DOORS) as FakeDoor[]
 
 export const isFakeDoor = (v: unknown): v is FakeDoor => typeof v === "string" && v in FAKE_DOORS
