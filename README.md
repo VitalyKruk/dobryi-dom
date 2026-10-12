@@ -59,6 +59,22 @@ REST API на Node 24 + Express 5 в [server/](server/). TypeScript запуск
 | `POST /api/client-errors` | ошибки из браузера → серверный лог (не больше 20 в минуту с одного адреса) | все |
 | `POST /api/fake-doors`, `GET /api/admin/fake-doors` | переход по кнопке функции в разработке; сколько раз нажимали (не больше 30 в минуту с одного адреса) | все / админ |
 
+### Supabase
+
+Прод-стек (`api`) хранит данные в Postgres Supabase, а фото — в Supabase Storage (бакет `pet-photos`), если в `.env` заданы `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`. Иначе всё по-прежнему хранится в JSON-файле.
+
+```bash
+npm run supabase:start
+```
+
+Затем `npm run supabase:env` записывает в `.env` адрес и ключ локального Supabase, а `docker compose up -d --build web api` поднимает стек на Supabase. Studio открывается на http://127.0.0.1:54323.
+
+- **Схема** лежит в [supabase/migrations](supabase/migrations). На всех таблицах включён RLS без политик: данные доступны только серверу по ключу service_role.
+- **Перенос данных.** При первом запуске на пустом Supabase данные и фото переносятся из `db.json`.
+- **Тесты.** `npm run test:supabase` прогоняет тесты API на Supabase и **сбрасывает его данные к демо**.
+- **Облачный проект.** Впишите его адрес и ключ в `.env` (см. `.env.example`) и примените схему через `npx supabase db push`.
+- **Ограничения.** Один процесс API на базу. Dev-контейнер работает на JSON.
+
 ### Логирование
 
 **Логи API** ([server/logger.ts](server/logger.ts)) пишутся в stdout по одной JSON-строке на событие. Смотреть их:

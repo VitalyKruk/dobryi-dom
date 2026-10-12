@@ -1,9 +1,14 @@
 /*
- * Хранилище — один JSON-файл (data/db.json).
- * Запись атомарная (временный файл + rename) и последовательная: параллельные запросы
- * не перетрут друг друга и не оставят полузаписанный файл при падении.
+ * Хранилище данных API. Все данные держим в памяти (их немного — сотни записей), изменения
+ * идут строго по очереди, а сохраняет их подключаемый бэкенд:
+ *
+ *   - JsonBackend — один файл data/db.json + папка data/uploads (тесты, запуск без Supabase);
+ *   - SupabaseBackend (server/supabase.ts) — таблицы Postgres и Storage в Supabase.
+ *
+ * Код маршрутов (app.ts) от бэкенда не зависит: он работает со store.db и store.write().
+ * Ограничение: один процесс API на базу — кеш в памяти не синхронизируется между процессами.
  */
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { seedApplications, seedPets, seedUsers, seedVolunteers, DEMO_PASSWORD } from "../src/lib/seed.ts"
 import { seedAudit } from "../src/lib/audit.ts"
@@ -53,9 +58,22 @@ export async function seedDb(): Promise<DB> {
   })
 }
 
-export class Store {
-  private data!: DB
-  private queue: Promise<void> = Promise.resolve()
+/** Куда сохраняются данные и фото */
+export interface Backend {
+  /** для лога при запуске: путь к файлу или адрес Supabase */
+  readonly location: string
+  /** null — хранилище пустое (первый запуск) */
+  load(): Promise<DB | null>
+  save(db: DB): Promise<void>
+  saveUpload(name: string, body: Buffer, contentType: string): Promise<void>
+  /** null — файла нет */
+  readUpload(name: string): Promise<Buffer | null>
+  /** имена всех загруженных фото — для переноса между бэкендами */
+  listUploads(): Promise<string[]>
+}
+
+/** Один JSON-файл: запись атомарная (временный файл + rename) — при падении не останется полузаписанного файла */
+export class JsonBackend implements Backend {
   readonly file: string
   readonly uploadsDir: string
 
@@ -64,37 +82,119 @@ export class Store {
     this.uploadsDir = path.join(dataDir, "uploads")
   }
 
-  async init() {
+  get location() {
+    return this.file
+  }
+
+  async load() {
     await mkdir(this.uploadsDir, { recursive: true })
     try {
-      this.data = JSON.parse(await readFile(this.file, "utf8")) as DB
-      // db.json, созданный до появления журнала, — начинаем журнал с пустого
-      this.data.audit ??= []
-      this.data.fakeDoors ??= {}
-      // Демо-аккаунт, добавленный в seed.ts после создания базы, — дописываем, иначе его кнопка входа не сработает
-      for (const u of seedUsers) {
-        if (this.data.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) continue
-        this.data.users.push(structuredClone(u))
-        this.data.passwords[u.email] = await hashPassword(DEMO_PASSWORD)
-      }
+      return JSON.parse(await readFile(this.file, "utf8")) as DB
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e
-      this.data = await seedDb()
-      await this.flush()
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return null
+      throw e
     }
+  }
+
+  async save(db: DB) {
+    const tmp = `${this.file}.${process.pid}.tmp`
+    await writeFile(tmp, JSON.stringify(db, null, 2))
+    await rename(tmp, this.file)
+  }
+
+  async saveUpload(name: string, body: Buffer) {
+    await writeFile(path.join(this.uploadsDir, name), body)
+  }
+
+  async readUpload(name: string) {
+    try {
+      return await readFile(path.join(this.uploadsDir, name))
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return null
+      throw e
+    }
+  }
+
+  async listUploads() {
+    try {
+      return (await readdir(this.uploadsDir)).filter((n) => UPLOAD_NAME.test(n))
+    } catch {
+      return []
+    }
+  }
+}
+
+/** Имя загруженного фото: его придумывает сервер — 32 hex-символа и расширение */
+export const UPLOAD_NAME = /^[a-f0-9]{32}\.(jpg|png|webp)$/
+
+export const uploadType = (name: string) =>
+  name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg"
+
+export class Store {
+  private data!: DB
+  private queue: Promise<void> = Promise.resolve()
+  readonly backend: Backend
+  private readonly importFrom?: Backend
+
+  /**
+   * @param backend куда сохранять; строка — папка для JsonBackend (как было раньше)
+   * @param importFrom откуда перенести данные, если основное хранилище пустое (например, db.json → Supabase)
+   */
+  constructor(backend: Backend | string, importFrom?: Backend) {
+    this.backend = typeof backend === "string" ? new JsonBackend(backend) : backend
+    this.importFrom = importFrom
+  }
+
+  get location() {
+    return this.backend.location
+  }
+
+  async init() {
+    let data = await this.backend.load()
+    let source = "existing"
+    if (!data && this.importFrom) {
+      data = await this.importFrom.load()
+      if (data) {
+        source = "import"
+        // Фото переносим вместе с данными: ссылки /uploads/<имя> в карточках остаются рабочими
+        for (const name of await this.importFrom.listUploads()) {
+          const body = await this.importFrom.readUpload(name)
+          if (body) await this.backend.saveUpload(name, body, uploadType(name))
+        }
+      }
+    }
+    if (!data) {
+      data = await seedDb()
+      source = "seed"
+    }
+    // База, созданная до появления журнала и фейкдоров, — начинаем их с пустого
+    data.audit ??= []
+    data.fakeDoors ??= {}
+    // Демо-аккаунт, добавленный в seed.ts после создания базы, — дописываем, иначе его кнопка входа не сработает
+    for (const u of seedUsers) {
+      if (data.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) continue
+      data.users.push(structuredClone(u))
+      data.passwords[u.email] = await hashPassword(DEMO_PASSWORD)
+    }
+    this.data = data
+    await this.backend.save(this.data)
+    this.source = source
     return this
   }
+
+  /** откуда взялись данные при запуске: existing | import | seed — для лога */
+  source = "existing"
 
   get db() {
     return this.data
   }
 
-  /** Изменить данные и сохранить на диск; следующее изменение ждёт окончания предыдущего */
+  /** Изменить данные и сохранить; следующее изменение ждёт окончания предыдущего */
   async write<T>(fn: (db: DB) => T | Promise<T>): Promise<T> {
     let result!: T
     const run = this.queue.then(async () => {
       result = await fn(this.data)
-      await this.flush()
+      await this.backend.save(this.data)
     })
     this.queue = run.catch(() => {})
     await run
@@ -110,9 +210,11 @@ export class Store {
     })
   }
 
-  private async flush() {
-    const tmp = `${this.file}.${process.pid}.tmp`
-    await writeFile(tmp, JSON.stringify(this.data, null, 2))
-    await rename(tmp, this.file)
+  saveUpload(name: string, body: Buffer, contentType: string) {
+    return this.backend.saveUpload(name, body, contentType)
+  }
+
+  readUpload(name: string) {
+    return this.backend.readUpload(name)
   }
 }
