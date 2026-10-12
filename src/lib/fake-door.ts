@@ -14,7 +14,7 @@ export type FakeDoor = keyof typeof FAKE_DOORS
 
 /** Благодарность на странице «в разработке»: тем, кто хотел помочь деньгами, — отдельные слова */
 export const fakeDoorThanks = (feature: FakeDoor) =>
-  feature === "donate" ? "Спасибо, что решили помочь нам." : "Спасибо, что заинтересовались."
+  feature === "donate" ? "Спасибо, что решили помочь нам." : "Спасибо, что заинтересовались нашими хвостиками."
 
 export const FAKE_DOOR_IDS = Object.keys(FAKE_DOORS) as FakeDoor[]
 
