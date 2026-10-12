@@ -66,6 +66,12 @@ export class Store {
       this.data = JSON.parse(await readFile(this.file, "utf8")) as DB
       // db.json, созданный до появления журнала, — начинаем журнал с пустого
       this.data.audit ??= []
+      // Демо-аккаунт, добавленный в seed.ts после создания базы, — дописываем, иначе его кнопка входа не сработает
+      for (const u of seedUsers) {
+        if (this.data.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) continue
+        this.data.users.push(structuredClone(u))
+        this.data.passwords[u.email] = await hashPassword(DEMO_PASSWORD)
+      }
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e
       this.data = await seedDb()

@@ -1,6 +1,6 @@
 /* Интеграционные тесты API: npm run test:api (node:test, сервер на временной папке данных) */
 import assert from "node:assert/strict"
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -9,7 +9,8 @@ import { createApp } from "./app.ts"
 
 // Логи запросов в выводе тестов только мешают; LOG_LEVEL=info npm run test:api — чтобы увидеть
 process.env.LOG_LEVEL ??= "silent"
-import { Store } from "./store.ts"
+import { seedDb, Store } from "./store.ts"
+import { verifyPassword } from "./auth.ts"
 
 let base = ""
 let dir = ""
@@ -322,6 +323,24 @@ describe("журнал действий и логи", () => {
   test("у каждого ответа есть X-Request-Id", async () => {
     const r = await api("GET", "/api/pets/count")
     assert.match(r.requestId ?? "", /^[0-9a-f-]{36}$/)
+  })
+})
+
+describe("миграция базы", () => {
+  test("демо-аккаунт, которого нет в старом db.json, добавляется при запуске", async () => {
+    const old = await mkdtemp(path.join(tmpdir(), "dobryi-dom-migrate-"))
+    try {
+      const db = await seedDb()
+      db.users = db.users.filter((u) => u.id !== "u-svetlana")
+      delete db.passwords["svetlana@dobryi-dom.ru"]
+      await writeFile(path.join(old, "db.json"), JSON.stringify(db))
+      const store = await new Store(old).init()
+      assert.ok(store.db.users.some((u) => u.email === "svetlana@dobryi-dom.ru"))
+      assert.ok(await verifyPassword("demo1234", store.db.passwords["svetlana@dobryi-dom.ru"]))
+      assert.equal(store.db.users.filter((u) => u.email === "olga@dobryi-dom.ru").length, 1, "существующие не дублируются")
+    } finally {
+      await rm(old, { recursive: true, force: true })
+    }
   })
 })
 

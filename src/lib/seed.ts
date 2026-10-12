@@ -312,6 +312,11 @@ export const seedUsers: User[] = [
     id: "u-olga", name: "Ольга Васильева", email: "olga@dobryi-dom.ru", phone: "+7 (900) 111-22-33", city: "Санкт-Петербург",
     role: "admin", favorites: [], notify: { newPets: false, applicationUpdates: true, email: true },
   },
+  // Второй администратор: по PRD карточки и заявки ведут двое
+  {
+    id: "u-svetlana", name: "Светлана Орлова", email: "svetlana@dobryi-dom.ru", phone: "+7 (921) 444-55-66", city: "Санкт-Петербург",
+    role: "admin", favorites: [], notify: { newPets: true, applicationUpdates: true, email: true },
+  },
 ]
 
 /** Свежие заявки за последние две недели; номера A-… раздаёт seed-history.ts по дате поступления */
