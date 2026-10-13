@@ -130,9 +130,19 @@ describe("заявки", () => {
 
   test("одобрение бронирует питомца; волонтёр не может менять статус", async () => {
     const created = await api("POST", "/api/applications", { ...application, petId: "sima", email: "sima@example.com" })
-    const volunteer = await api("PATCH", `/api/applications/${created.json.id}/status`, { status: "approved" }, await login("ivan@dobryi-dom.ru"))
+    const volunteer = await api(
+      "PATCH",
+      `/api/applications/${created.json.id}/status`,
+      { status: "approved" },
+      await login("ivan@dobryi-dom.ru"),
+    )
     assert.equal(volunteer.status, 403)
-    const admin = await api("PATCH", `/api/applications/${created.json.id}/status`, { status: "approved" }, await login("olga@dobryi-dom.ru"))
+    const admin = await api(
+      "PATCH",
+      `/api/applications/${created.json.id}/status`,
+      { status: "approved" },
+      await login("olga@dobryi-dom.ru"),
+    )
     assert.equal(admin.status, 200)
     assert.ok(admin.json.decidedAt, "решение датируется — для аналитики")
     assert.equal((await api("GET", "/api/pets/sima")).json.status, "reserved")
@@ -178,7 +188,8 @@ describe("аналитика и подбор", () => {
     assert.equal(r.json.pets.waiting, stats.waiting)
     assert.equal(r.json.volunteers, stats.volunteers)
     const raw = JSON.stringify(r.json)
-    for (const leak of ["@", "+7", "Анна", "rejectReasons", "insights", "staffComments"]) assert.ok(!raw.includes(leak), `в ответе есть «${leak}»`)
+    for (const leak of ["@", "+7", "Анна", "rejectReasons", "insights", "staffComments"])
+      assert.ok(!raw.includes(leak), `в ответе есть «${leak}»`)
     assert.deepEqual((await api("GET", "/api/investors", undefined, undefined, { "x-demo": "empty" })).json.pets.waiting, 0)
   })
 
@@ -237,7 +248,11 @@ describe("вход и профиль", () => {
 describe("питомцы в админке и загрузка фото", () => {
   // Минимальный валидный PNG 1×1
   const png = Uint8Array.from(
-    Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000000" + "1f15c4890000000d49444154789c6360000002000154a24f5f0000000049454e44ae426082", "hex"),
+    Buffer.from(
+      "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
+        "1f15c4890000000d49444154789c6360000002000154a24f5f0000000049454e44ae426082",
+      "hex",
+    ),
   )
 
   test("гость и волонтёр не могут загружать фото", async () => {

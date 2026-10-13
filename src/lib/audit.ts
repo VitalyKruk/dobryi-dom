@@ -36,8 +36,6 @@ export const auditGroups = [
   { value: "data", label: "Данные" },
 ] as const
 
-export type AuditGroup = (typeof auditGroups)[number]["value"]
-
 export const actorOf = (u?: User | null): AuditEntry["actor"] => (u ? { id: u.id, name: u.name, role: u.role } : null)
 
 /** Добавить запись в начало журнала и обрезать хвост */

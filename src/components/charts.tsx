@@ -51,9 +51,7 @@ export function StackedBars<K extends string, T extends Record<K, number>>({
                 style={{ height: `calc((100% - 1.5rem) * ${total(d) / top})` }}
                 title={`${d.label}: ${series.map((s) => `${s.label.toLowerCase()} ${d[s.key]}`).join(", ")}`}
               >
-                {series.map((s) =>
-                  d[s.key] ? <div key={s.key} className={s.className} style={{ flexGrow: d[s.key] }} /> : null,
-                )}
+                {series.map((s) => (d[s.key] ? <div key={s.key} className={s.className} style={{ flexGrow: d[s.key] }} /> : null))}
               </div>
               <span className={cn("h-5 text-[11px] text-muted-foreground tabular-nums sm:text-xs", i % 2 === 1 && "max-sm:invisible")}>
                 {d.label}

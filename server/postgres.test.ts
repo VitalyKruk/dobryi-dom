@@ -40,7 +40,10 @@ describe("Postgres", { skip: backend ? false : "нет DATABASE_URL — проп
     assert.ok(reloaded)
     assert.equal(reloaded.pets.length, store.db.pets.length)
     assert.ok(!reloaded.pets.some((p) => p.id === "keks"), "удалённый питомец удалён и в базе")
-    assert.deepEqual(plain(reloaded.applications.find((a) => a.id === "A-TEST-1")), plain(store.db.applications.find((a) => a.id === "A-TEST-1")))
+    assert.deepEqual(
+      plain(reloaded.applications.find((a) => a.id === "A-TEST-1")),
+      plain(store.db.applications.find((a) => a.id === "A-TEST-1")),
+    )
     assert.equal(reloaded.fakeDoors.donate?.count, 3)
     assert.ok(reloaded.subscribers.includes("pg@example.com"))
     assert.equal(reloaded.seq, store.db.seq)

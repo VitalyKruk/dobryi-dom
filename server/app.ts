@@ -28,8 +28,37 @@ function publicPet(pet: Pet, viewer?: User): Pet {
 
 function slugify(name: string, taken: (id: string) => boolean) {
   const map: Record<string, string> = {
-    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o",
-    п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ы: "y", э: "e", ю: "yu", я: "ya",
+    а: "a",
+    б: "b",
+    в: "v",
+    г: "g",
+    д: "d",
+    е: "e",
+    ё: "e",
+    ж: "zh",
+    з: "z",
+    и: "i",
+    й: "y",
+    к: "k",
+    л: "l",
+    м: "m",
+    н: "n",
+    о: "o",
+    п: "p",
+    р: "r",
+    с: "s",
+    т: "t",
+    у: "u",
+    ф: "f",
+    х: "h",
+    ц: "c",
+    ч: "ch",
+    ш: "sh",
+    щ: "sch",
+    ы: "y",
+    э: "e",
+    ю: "yu",
+    я: "ya",
   }
   const base =
     name
@@ -96,7 +125,12 @@ export function createApp(store: Store) {
     const filters = filtersFromQuery(req.query as Record<string, unknown>)
     const page = Math.max(1, Number(req.query.page) || 1)
     const pageSize = Math.min(48, Math.max(1, Number(req.query.pageSize) || 12))
-    const all = demoEmpty(req) ? [] : sortPets(db().pets.filter((p) => matchesFilters(p, filters)), filters.sort)
+    const all = demoEmpty(req)
+      ? []
+      : sortPets(
+          db().pets.filter((p) => matchesFilters(p, filters)),
+          filters.sort,
+        )
     res.json({ items: all.slice((page - 1) * pageSize, page * pageSize).map((p) => publicPet(p, viewer)), total: all.length })
   })
 
@@ -162,7 +196,11 @@ export function createApp(store: Store) {
       if (status === "adopted" && p.status !== "adopted") p.adoptedAt = now()
       if (status !== "adopted") delete p.adoptedAt
       if (p.status !== status) {
-        audit(d, req, { action: "pet.status", target: { type: "pet", id: p.id, label: p.name }, details: petStatusChange(p, p.status, status) })
+        audit(d, req, {
+          action: "pet.status",
+          target: { type: "pet", id: p.id, label: p.name },
+          details: petStatusChange(p, p.status, status),
+        })
       }
       p.status = status
       return p
@@ -327,9 +365,7 @@ export function createApp(store: Store) {
       const pet = d.pets.find((p) => p.id === input.petId)
       if (!pet || pet.status === "adopted") throw new HttpError(404, "Этот питомец уже дома или не найден")
       const email = input.email.toLowerCase()
-      const duplicate = d.applications.find(
-        (a) => a.petId === input.petId && a.email.toLowerCase() === email && a.status === "pending",
-      )
+      const duplicate = d.applications.find((a) => a.petId === input.petId && a.email.toLowerCase() === email && a.status === "pending")
       if (duplicate) {
         throw new HttpError(409, `У вас уже есть заявка на этого питомца (№ ${duplicate.id}) — мы её рассматриваем.`)
       }
@@ -386,7 +422,11 @@ export function createApp(store: Store) {
       if (status === "approved") {
         const pet = d.pets.find((p) => p.id === app.petId)
         if (pet?.status === "available") {
-          audit(d, req, { action: "pet.status", target: { type: "pet", id: pet.id, label: pet.name }, details: petStatusChange(pet, "available", "reserved") })
+          audit(d, req, {
+            action: "pet.status",
+            target: { type: "pet", id: pet.id, label: pet.name },
+            details: petStatusChange(pet, "available", "reserved"),
+          })
           pet.status = "reserved"
         }
       }

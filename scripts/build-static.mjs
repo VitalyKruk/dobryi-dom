@@ -56,8 +56,22 @@ console.log(`Фото: ${jobs.length} (скачано сейчас: ${downloaded
 
 // 3. Одна страница: JS и CSS внутри
 const assets = readdirSync(path.join(OUT, "assets"))
-const js = readFileSync(path.join(OUT, "assets", assets.find((f) => f.endsWith(".js"))), "utf8")
-const css = readFileSync(path.join(OUT, "assets", assets.find((f) => f.endsWith(".css"))), "utf8")
+const js = readFileSync(
+  path.join(
+    OUT,
+    "assets",
+    assets.find((f) => f.endsWith(".js")),
+  ),
+  "utf8",
+)
+const css = readFileSync(
+  path.join(
+    OUT,
+    "assets",
+    assets.find((f) => f.endsWith(".css")),
+  ),
+  "utf8",
+)
 // Закрывающий тег внутри кода оборвал бы встроенный блок
 const safeJs = js.replaceAll("</script", "<\\/script")
 const safeCss = css.replaceAll("</style", "<\\/style")

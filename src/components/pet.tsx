@@ -103,21 +103,10 @@ export function FavoriteButton({
 }) {
   const { isFavorite, toggleFavorite } = useAuth()
   const active = isFavorite(pet.id)
-  const icon = (
-    <Heart
-      className={cn("transition-colors", active ? "fill-primary stroke-primary-foreground" : "")}
-      strokeWidth={2.25}
-    />
-  )
+  const icon = <Heart className={cn("transition-colors", active ? "fill-primary stroke-primary-foreground" : "")} strokeWidth={2.25} />
   if (variant === "outline") {
     return (
-      <Button
-        variant="outline"
-        size="lg"
-        aria-pressed={active}
-        onClick={() => toggleFavorite(pet.id, pet.name)}
-        className={className}
-      >
+      <Button variant="outline" size="lg" aria-pressed={active} onClick={() => toggleFavorite(pet.id, pet.name)} className={className}>
         {icon}
         {active ? "В избранном" : "В избранное"}
       </Button>

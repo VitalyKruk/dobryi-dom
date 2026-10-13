@@ -114,9 +114,7 @@ step("npm audit — зависимости", () => {
   writeFileSync(path.join(OUT, "npm-audit.json"), r.stdout)
   const report = JSON.parse(r.stdout || "{}")
   const v = report.metadata?.vulnerabilities ?? {}
-  console.log(
-    `  critical: ${v.critical ?? 0}, high: ${v.high ?? 0}, moderate: ${v.moderate ?? 0}, low: ${v.low ?? 0}`,
-  )
+  console.log(`  critical: ${v.critical ?? 0}, high: ${v.high ?? 0}, moderate: ${v.moderate ?? 0}, low: ${v.low ?? 0}`)
   for (const [name, info] of Object.entries(report.vulnerabilities ?? {})) {
     if (info.severity === "high" || info.severity === "critical") {
       const fix = info.fixAvailable ? "есть исправление: npm audit fix" : "исправления пока нет"
@@ -137,18 +135,30 @@ step("trivy fs — lock-файл, секреты, Dockerfile и compose", () => 
   }
   const r = run("docker", [
     ...trivyBase,
-    "-v", `${ROOT}:/src:ro`,
-    TRIVY, "fs",
-    "--scanners", "vuln,secret,misconfig",
-    "--severity", SEVERITY,
-    "--skip-dirs", "node_modules",
-    "--skip-dirs", "dist",
-    "--skip-dirs", ".security",
-    "--skip-dirs", "data",
-    "--skip-dirs", "dist-static",
-    "--skip-dirs", ".static-cache",
-    "--skip-dirs", "logs",
-    "--exit-code", "1",
+    "-v",
+    `${ROOT}:/src:ro`,
+    TRIVY,
+    "fs",
+    "--scanners",
+    "vuln,secret,misconfig",
+    "--severity",
+    SEVERITY,
+    "--skip-dirs",
+    "node_modules",
+    "--skip-dirs",
+    "dist",
+    "--skip-dirs",
+    ".security",
+    "--skip-dirs",
+    "data",
+    "--skip-dirs",
+    "dist-static",
+    "--skip-dirs",
+    ".static-cache",
+    "--skip-dirs",
+    "logs",
+    "--exit-code",
+    "1",
     "--quiet",
     "/src",
   ])
@@ -181,11 +191,15 @@ step(`trivy image — образы ${IMAGES.join(", ")}`, () => {
     console.log(`  Сканирую ${image}…`)
     const r = run("docker", [
       ...trivyBase,
-      "-v", "/var/run/docker.sock:/var/run/docker.sock",
-      TRIVY, "image",
-      "--severity", SEVERITY,
+      "-v",
+      "/var/run/docker.sock:/var/run/docker.sock",
+      TRIVY,
+      "image",
+      "--severity",
+      SEVERITY,
       "--ignore-unfixed",
-      "--exit-code", "1",
+      "--exit-code",
+      "1",
       "--quiet",
       image,
     ])

@@ -25,9 +25,7 @@ export default function SoonPage() {
       <h1 ref={heading} tabIndex={-1} className="max-w-2xl text-3xl leading-10 outline-none md:text-4xl md:leading-12">
         Данный раздел находится в разработке
       </h1>
-      <p className="max-w-xl text-lg leading-7 text-muted-foreground">
-        {FAKE_DOOR_MESSAGES[feature]}
-      </p>
+      <p className="max-w-xl text-lg leading-7 text-muted-foreground">{FAKE_DOOR_MESSAGES[feature]}</p>
       <div className="flex flex-wrap justify-center gap-2">
         <Button size="lg" variant="secondary" onClick={() => navigate(-1)}>
           <ArrowLeft /> Вернуться назад

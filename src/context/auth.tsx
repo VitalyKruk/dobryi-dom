@@ -28,26 +28,12 @@ type AuthContextValue = {
  * настоящая проверка прав на сервере (server/auth.ts).
  */
 export type Permission =
-  | "admin.access"
-  | "pets.status"
-  | "pets.edit"
-  | "applications.view"
-  | "applications.status"
-  | "volunteers.manage"
-  | "users.manage"
+  "admin.access" | "pets.status" | "pets.edit" | "applications.view" | "applications.status" | "volunteers.manage" | "users.manage"
 
 const permissions: Record<Role, Permission[]> = {
   user: [],
   volunteer: ["admin.access", "pets.status", "applications.view"],
-  admin: [
-    "admin.access",
-    "pets.status",
-    "pets.edit",
-    "applications.view",
-    "applications.status",
-    "volunteers.manage",
-    "users.manage",
-  ],
+  admin: ["admin.access", "pets.status", "pets.edit", "applications.view", "applications.status", "volunteers.manage", "users.manage"],
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -84,10 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u
   }, [])
 
-  const login = useCallback(
-    async (email: string, password: string) => startSession(await api.login(email, password)),
-    [startSession],
-  )
+  const login = useCallback(async (email: string, password: string) => startSession(await api.login(email, password)), [startSession])
 
   const register = useCallback(
     async (input: { name: string; email: string; password: string }) => startSession(await api.register(input)),

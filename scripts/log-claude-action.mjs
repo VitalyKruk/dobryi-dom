@@ -45,7 +45,9 @@ function describe(tool, input) {
   switch (tool) {
     case "Bash":
     case "PowerShell": {
-      const cmd = String(input.command ?? "").replace(/\s+/g, " ").trim()
+      const cmd = String(input.command ?? "")
+        .replace(/\s+/g, " ")
+        .trim()
       return redact(cmd.length > 300 ? `${cmd.slice(0, 300)}…` : cmd)
     }
     case "Write":

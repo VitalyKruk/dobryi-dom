@@ -37,7 +37,19 @@ const card = "flex flex-col gap-4 rounded-2xl bg-card p-6 ring-1 ring-foreground
 
 const days = (n: number | null) => (n === null ? "—" : `${formatNumber(n)} ${plural(Math.round(n), ["день", "дня", "дней"])}`)
 
-function Section({ id, title, lead, children, className }: { id: string; title: string; lead?: ReactNode; children: ReactNode; className?: string }) {
+function Section({
+  id,
+  title,
+  lead,
+  children,
+  className,
+}: {
+  id: string
+  title: string
+  lead?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
   return (
     <section className={cn("container-page pb-12 md:pb-16 lg:pb-24", className)} aria-labelledby={id}>
       <div className="mb-8 flex max-w-3xl flex-col gap-2 md:mb-12">
@@ -184,8 +196,14 @@ const platform = [
   { title: "Каталог и подбор", text: "Фильтры по характеру и условиям, подбор «Подходят вам» с процентом совпадения и причинами." },
   { title: "Заявка в 4 шага", text: "Анкета с проверкой полей, черновиком и сводкой; повторная заявка на того же питомца не создаётся." },
   { title: "Кабинет сотрудника", text: "Дашборд с воронкой и подсказками, заявки со статусами и комментариями, расписание волонтёров." },
-  { title: "Права и безопасность", text: "Роли пользователь / волонтёр / администратор проверяются на сервере, пароли хранятся как хеш scrypt." },
-  { title: "Качество", text: "Интеграционные тесты API, линтер и проверка типов в CI на GitHub Actions, автопроверка уязвимостей (npm audit, Trivy)." },
+  {
+    title: "Права и безопасность",
+    text: "Роли пользователь / волонтёр / администратор проверяются на сервере, пароли хранятся как хеш scrypt.",
+  },
+  {
+    title: "Качество",
+    text: "Интеграционные тесты API, линтер и проверка типов в CI на GitHub Actions, автопроверка уязвимостей (npm audit, Trivy).",
+  },
   { title: "Развёртывание", text: "Docker-образы сайта (nginx) и API (Node 24), публикация в GitHub Container Registry." },
 ]
 
@@ -209,12 +227,12 @@ export default function InvestorsPage() {
               О проекте
             </h2>
             <p>
-              АНО «Добрый дом» — приют для кошек и собак в Санкт-Петербурге. Работаем с {FOUNDED_YEAR} года: начинали с
-              гаража и трёх вольеров, сегодня у приюта тёплые вольеры, кошачьи комнаты и собственный медблок.
+              АНО «Добрый дом» — приют для кошек и собак в Санкт-Петербурге. Работаем с {FOUNDED_YEAR} года: начинали с гаража и трёх
+              вольеров, сегодня у приюта тёплые вольеры, кошачьи комнаты и собственный медблок.
             </p>
             <p>
-              Миссия — чтобы каждое животное получило помощь, а каждая встреча с новой семьёй была осознанной: без спешки и с
-              поддержкой после переезда. Сайт ведёт весь путь — от каталога до решения по заявке.
+              Миссия — чтобы каждое животное получило помощь, а каждая встреча с новой семьёй была осознанной: без спешки и с поддержкой
+              после переезда. Сайт ведёт весь путь — от каталога до решения по заявке.
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-4 self-start">
@@ -330,8 +348,8 @@ export default function InvestorsPage() {
                 {r?.dataSince && (
                   <>
                     {" "}
-                    В базе {formatNumber(r.applicationsAllTime)} {plural(r.applicationsAllTime, ["заявка", "заявки", "заявок"])}, самая ранняя —{" "}
-                    {formatDate(r.dataSince)}.
+                    В базе {formatNumber(r.applicationsAllTime)} {plural(r.applicationsAllTime, ["заявка", "заявки", "заявок"])}, самая
+                    ранняя — {formatDate(r.dataSince)}.
                   </>
                 )}
               </span>
@@ -339,15 +357,15 @@ export default function InvestorsPage() {
             <li className="flex gap-3">
               <Info className="mt-1 size-4 shrink-0 text-secondary-foreground" aria-hidden="true" />
               <span>
-                {r ? formatNumber(r.adoptedBeforeSite) : "…"} пристройств до запуска сайта взяты из архива приюта — в базе сайта
-                этих питомцев нет.
+                {r ? formatNumber(r.adoptedBeforeSite) : "…"} пристройств до запуска сайта взяты из архива приюта — в базе сайта этих
+                питомцев нет.
               </span>
             </li>
             <li className="flex gap-3">
               <Info className="mt-1 size-4 shrink-0 text-secondary-foreground" aria-hidden="true" />
               <span>
-                Финансовой отчётности на сайте пока нет, поэтому здесь нет денежных показателей. Запросить её можно через
-                страницу «Контакты».
+                Финансовой отчётности на сайте пока нет, поэтому здесь нет денежных показателей. Запросить её можно через страницу
+                «Контакты».
               </span>
             </li>
           </ul>
@@ -360,9 +378,7 @@ export default function InvestorsPage() {
             <h2 id="cta-title" className="text-3xl leading-10">
               Обсудим партнёрство?
             </h2>
-            <p className="text-lg leading-7 text-foreground/80">
-              Напишите нам — ответим на вопросы о приюте и сотрудничестве.
-            </p>
+            <p className="text-lg leading-7 text-foreground/80">Напишите нам — ответим на вопросы о приюте и сотрудничестве.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="lg">

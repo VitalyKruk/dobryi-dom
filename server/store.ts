@@ -127,8 +127,7 @@ export class JsonBackend implements Backend {
 /** Имя загруженного фото: его придумывает сервер — 32 hex-символа и расширение */
 export const UPLOAD_NAME = /^[a-f0-9]{32}\.(jpg|png|webp)$/
 
-export const uploadType = (name: string) =>
-  name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg"
+export const uploadType = (name: string) => (name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg")
 
 export class Store {
   private data!: DB

@@ -108,13 +108,7 @@ function persist() {
 // ——— «Запрос»: задержка сети, демо-режим, права, ошибки как у сервера ———
 
 type Permission =
-  | "admin.access"
-  | "pets.status"
-  | "pets.edit"
-  | "applications.view"
-  | "applications.status"
-  | "volunteers.manage"
-  | "users.manage"
+  "admin.access" | "pets.status" | "pets.edit" | "applications.view" | "applications.status" | "volunteers.manage" | "users.manage"
 
 const permissions: Record<Role, Permission[]> = {
   user: [],
@@ -174,8 +168,37 @@ function publicPet(pet: Pet, viewer?: User): Pet {
 
 function slugify(name: string, taken: (id: string) => boolean) {
   const map: Record<string, string> = {
-    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o",
-    п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ы: "y", э: "e", ю: "yu", я: "ya",
+    а: "a",
+    б: "b",
+    в: "v",
+    г: "g",
+    д: "d",
+    е: "e",
+    ё: "e",
+    ж: "zh",
+    з: "z",
+    и: "i",
+    й: "y",
+    к: "k",
+    л: "l",
+    м: "m",
+    н: "n",
+    о: "o",
+    п: "p",
+    р: "r",
+    с: "s",
+    т: "t",
+    у: "u",
+    ф: "f",
+    х: "h",
+    ц: "c",
+    ч: "ch",
+    ш: "sh",
+    щ: "sch",
+    ы: "y",
+    э: "e",
+    ю: "yu",
+    я: "ya",
   }
   const base =
     name
@@ -197,7 +220,12 @@ export function getPets(filters: PetFilters, page = 1, pageSize = 12) {
   return call((c) => {
     // Через query-строку — как сервер: та же нормализация фильтров
     const f = filtersFromQuery(Object.fromEntries(filtersToQuery(filters)))
-    const all = c.empty ? [] : sortPets(c.d.pets.filter((p) => matchesFilters(p, f)), f.sort)
+    const all = c.empty
+      ? []
+      : sortPets(
+          c.d.pets.filter((p) => matchesFilters(p, f)),
+          f.sort,
+        )
     return { items: all.slice((page - 1) * pageSize, page * pageSize).map((p) => publicPet(p, c.me)), total: all.length }
   })
 }
@@ -322,7 +350,9 @@ function validatePet(input: unknown) {
   // а фото из демо-данных лежат рядом со страницей (photos/…), поэтому фото проверяем сами
   const { photos, ...rest } = (input ?? {}) as { photos?: unknown }
   const parsed = parse(s.petSchema.omit({ photos: true }), rest)
-  const list = Array.isArray(photos) ? photos.filter((p): p is string => typeof p === "string" && /^(data:image\/|photos\/|https:\/\/images\.unsplash\.com\/)/.test(p)) : []
+  const list = Array.isArray(photos)
+    ? photos.filter((p): p is string => typeof p === "string" && /^(data:image\/|photos\/|https:\/\/images\.unsplash\.com\/)/.test(p))
+    : []
   if (list.length === 0) throw new HttpError(400, "Проверьте введённые данные", { photos: "Добавьте хотя бы одно фото" })
   return { ...parsed, photos: list.slice(0, 8) }
 }
@@ -369,7 +399,8 @@ export function setPetStatus(id: string, status: PetStatus) {
     if (!p) throw new HttpError(404, "Питомец не найден")
     if (next === "adopted" && p.status !== "adopted") p.adoptedAt = now()
     if (next !== "adopted") delete p.adoptedAt
-    if (p.status !== next) audit(c, { action: "pet.status", target: { type: "pet", id: p.id, label: p.name }, details: petStatusChange(p, p.status, next) })
+    if (p.status !== next)
+      audit(c, { action: "pet.status", target: { type: "pet", id: p.id, label: p.name }, details: petStatusChange(p, p.status, next) })
     p.status = next
     return p
   })
@@ -440,7 +471,11 @@ export function updateApplicationStatus(id: string, status: ApplicationStatus) {
     if (!app) throw new HttpError(404, "Заявка не найдена")
     const petName = c.d.pets.find((p) => p.id === app.petId)?.name ?? app.petId
     if (app.status !== next) {
-      audit(c, { action: "application.status", target: { type: "application", id: app.id, label: `${app.id} · ${petName}` }, details: statusChange(app.status, next) })
+      audit(c, {
+        action: "application.status",
+        target: { type: "application", id: app.id, label: `${app.id} · ${petName}` },
+        details: statusChange(app.status, next),
+      })
     }
     app.status = next
     if (next === "pending") delete app.decidedAt
@@ -448,7 +483,11 @@ export function updateApplicationStatus(id: string, status: ApplicationStatus) {
     if (next === "approved") {
       const pet = c.d.pets.find((p) => p.id === app.petId)
       if (pet?.status === "available") {
-        audit(c, { action: "pet.status", target: { type: "pet", id: pet.id, label: pet.name }, details: petStatusChange(pet, "available", "reserved") })
+        audit(c, {
+          action: "pet.status",
+          target: { type: "pet", id: pet.id, label: pet.name },
+          details: petStatusChange(pet, "available", "reserved"),
+        })
         pet.status = "reserved"
       }
     }
@@ -511,7 +550,8 @@ export async function register(input: { name: string; email: string; password: s
   const r = await call(async (c) => {
     const data = parse(s.registerSchema, input)
     const email = data.email.toLowerCase()
-    if (c.d.users.some((u) => u.email.toLowerCase() === email)) throw new HttpError(409, "Этот email уже зарегистрирован — попробуйте войти.")
+    if (c.d.users.some((u) => u.email.toLowerCase() === email))
+      throw new HttpError(409, "Этот email уже зарегистрирован — попробуйте войти.")
     const user: User = {
       id: `u-${crypto.randomUUID().slice(0, 12)}`,
       name: data.name,
@@ -585,7 +625,8 @@ export function setUserRole(id: string, role: Role) {
     if (id === me.id) throw new HttpError(400, "Нельзя поменять роль самому себе")
     const u = c.d.users.find((x) => x.id === id)
     if (!u) throw new HttpError(404, "Пользователь не найден")
-    if (u.role !== next) audit(c, { action: "user.role", target: { type: "user", id: u.id, label: u.name }, details: roleChange(u.role, next) })
+    if (u.role !== next)
+      audit(c, { action: "user.role", target: { type: "user", id: u.id, label: u.name }, details: roleChange(u.role, next) })
     u.role = next
     return u
   })

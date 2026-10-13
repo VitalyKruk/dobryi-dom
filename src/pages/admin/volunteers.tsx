@@ -4,13 +4,7 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -115,7 +109,10 @@ function Schedule({ list, onChange }: { list: Volunteer[]; onChange: (l: Volunte
                   <td key={d} className="p-2">
                     <div className="flex min-h-24 flex-col gap-1 rounded-xl bg-muted/60 p-2">
                       {assigned.map((v) => (
-                        <span key={v.id} className="flex items-center justify-between gap-1 rounded-lg bg-secondary py-1 pr-1 pl-2 text-xs font-semibold text-secondary-foreground">
+                        <span
+                          key={v.id}
+                          className="flex items-center justify-between gap-1 rounded-lg bg-secondary py-1 pr-1 pl-2 text-xs font-semibold text-secondary-foreground"
+                        >
                           <span className="truncate">{v.name.split(" ")[0]}</span>
                           <button
                             type="button"
@@ -131,7 +128,12 @@ function Schedule({ list, onChange }: { list: Volunteer[]; onChange: (l: Volunte
                       {free.length > 0 && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="xs" className="mt-auto justify-start text-muted-foreground" aria-label={`Назначить на ${d}, ${s.label.toLowerCase()}`}>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="mt-auto justify-start text-muted-foreground"
+                              aria-label={`Назначить на ${d}, ${s.label.toLowerCase()}`}
+                            >
                               <Plus /> Назначить
                             </Button>
                           </DropdownMenuTrigger>
@@ -232,7 +234,11 @@ export default function AdminVolunteersPage() {
               ["schedule", "Расписание"],
               ["users", "Пользователи и роли"],
             ].map(([v, l]) => (
-              <TabsTrigger key={v} value={v} className="h-10 px-4 font-semibold text-secondary-foreground data-active:bg-card data-active:text-foreground">
+              <TabsTrigger
+                key={v}
+                value={v}
+                className="h-10 px-4 font-semibold text-secondary-foreground data-active:bg-card data-active:text-foreground"
+              >
                 {l}
               </TabsTrigger>
             ))}

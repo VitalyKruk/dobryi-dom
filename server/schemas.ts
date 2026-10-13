@@ -90,7 +90,11 @@ export const clientErrorSchema = z.object({
   message: z.string().trim().min(1).max(500),
   stack: z.string().max(4000).optional(),
   /** путь страницы без query-строки — там могут быть персональные данные */
-  page: z.string().max(300).regex(/^\/[^?#]*$/, { error: "Только путь, без параметров" }).optional(),
+  page: z
+    .string()
+    .max(300)
+    .regex(/^\/[^?#]*$/, { error: "Только путь, без параметров" })
+    .optional(),
   release: z.string().max(40).optional(),
 })
 

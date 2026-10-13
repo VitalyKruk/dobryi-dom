@@ -20,8 +20,20 @@ export function SadDog({ className }: Props) {
     <svg viewBox="0 0 240 200" aria-hidden="true" className={className}>
       <ellipse cx="120" cy="184" rx="80" ry="10" fill="#D6E4F0" />
       <path d="M70 120c0-38 22-64 50-64s50 26 50 64-22 60-50 60-50-22-50-60Z" fill="#F2E3CC" stroke="#3A3630" strokeWidth="4" />
-      <path d="M72 80c-18 4-26 34-18 58 4 12 16 8 18-4l6-40c2-10-2-15-6-14Z" fill="#C79A6B" stroke="#3A3630" strokeWidth="4" strokeLinejoin="round" />
-      <path d="M168 80c18 4 26 34 18 58-4 12-16 8-18-4l-6-40c-2-10 2-15 6-14Z" fill="#C79A6B" stroke="#3A3630" strokeWidth="4" strokeLinejoin="round" />
+      <path
+        d="M72 80c-18 4-26 34-18 58 4 12 16 8 18-4l6-40c2-10-2-15-6-14Z"
+        fill="#C79A6B"
+        stroke="#3A3630"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M168 80c18 4 26 34 18 58-4 12-16 8-18-4l-6-40c-2-10 2-15 6-14Z"
+        fill="#C79A6B"
+        stroke="#3A3630"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
       <path d="M98 112c4-4 10-4 14 0M128 112c4-4 10-4 14 0" stroke="#3A3630" strokeWidth="4" strokeLinecap="round" fill="none" />
       <ellipse cx="120" cy="134" rx="10" ry="7" fill="#3A3630" />
       <path d="M108 154c8-6 16-6 24 0" stroke="#3A3630" strokeWidth="4" strokeLinecap="round" fill="none" />

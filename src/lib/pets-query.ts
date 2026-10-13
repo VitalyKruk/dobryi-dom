@@ -57,10 +57,17 @@ export function similarPets(all: Pet[], pet: Pet, limit = 4) {
 /** «Питомцы недели»: поровну кошек и собак, сначала те, кто ждёт дольше */
 export function featuredPets(all: Pet[], limit = 6) {
   const free = all.filter((p) => p.status === "available")
-  const pick = (s: Pet["species"]) => sortPets(free.filter((p) => p.species === s), "oldest").slice(0, Math.ceil(limit / 2))
+  const pick = (s: Pet["species"]) =>
+    sortPets(
+      free.filter((p) => p.species === s),
+      "oldest",
+    ).slice(0, Math.ceil(limit / 2))
   const cats = pick("cat")
   const dogs = pick("dog")
-  return cats.flatMap((c, i) => [c, dogs[i]]).filter(Boolean).slice(0, limit)
+  return cats
+    .flatMap((c, i) => [c, dogs[i]])
+    .filter(Boolean)
+    .slice(0, limit)
 }
 
 /** Разбор фильтров из query-строки: ?species=cat,dog&age=baby&q=…&sort=… */

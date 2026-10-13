@@ -11,9 +11,7 @@ import type { Store } from "./store.ts"
 const KEY_LEN = 32
 
 function scryptAsync(password: string, salt: Buffer) {
-  return new Promise<Buffer>((resolve, reject) =>
-    scrypt(password, salt, KEY_LEN, (err, key) => (err ? reject(err) : resolve(key))),
-  )
+  return new Promise<Buffer>((resolve, reject) => scrypt(password, salt, KEY_LEN, (err, key) => (err ? reject(err) : resolve(key))))
 }
 
 export async function hashPassword(password: string) {
@@ -40,26 +38,12 @@ export const hashToken = (t: string) => createHash("sha256").update(t).digest("h
 
 /** Матрица доступа — та же, что в src/context/auth.tsx (PROMPT.md, раздел 5) */
 export type Permission =
-  | "admin.access"
-  | "pets.status"
-  | "pets.edit"
-  | "applications.view"
-  | "applications.status"
-  | "volunteers.manage"
-  | "users.manage"
+  "admin.access" | "pets.status" | "pets.edit" | "applications.view" | "applications.status" | "volunteers.manage" | "users.manage"
 
 const permissions: Record<Role, Permission[]> = {
   user: [],
   volunteer: ["admin.access", "pets.status", "applications.view"],
-  admin: [
-    "admin.access",
-    "pets.status",
-    "pets.edit",
-    "applications.view",
-    "applications.status",
-    "volunteers.manage",
-    "users.manage",
-  ],
+  admin: ["admin.access", "pets.status", "pets.edit", "applications.view", "applications.status", "volunteers.manage", "users.manage"],
 }
 
 export const can = (user: User | undefined, p: Permission) => !!user && permissions[user.role].includes(p)

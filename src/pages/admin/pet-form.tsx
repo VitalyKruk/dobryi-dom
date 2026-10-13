@@ -171,13 +171,18 @@ function PhotoUploader({ value, onChange, error }: { value: string[]; onChange: 
             <li key={src.slice(-40) + i} className="flex flex-col gap-2">
               <div className="relative">
                 <PetImage src={src} alt={`Фото ${i + 1}`} width={240} className="rounded-xl" />
-                {i === 0 && (
-                  <span className="absolute top-2 left-2 rounded-lg bg-card px-2 py-0.5 text-xs font-bold">Обложка</span>
-                )}
+                {i === 0 && <span className="absolute top-2 left-2 rounded-lg bg-card px-2 py-0.5 text-xs font-bold">Обложка</span>}
               </div>
               <div className="flex justify-between">
                 <div className="flex gap-1">
-                  <Button type="button" variant="ghost" size="icon-sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Сдвинуть фото ${i + 1} влево`}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                    aria-label={`Сдвинуть фото ${i + 1} влево`}
+                  >
                     <ChevronLeft />
                   </Button>
                   <Button
@@ -257,7 +262,9 @@ function PetForm({ pet }: { pet?: Pet }) {
   const sex = watch("sex")
 
   // Предупреждение о несохранённых изменениях: переход внутри SPA и закрытие вкладки
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => formState.isDirty && !saved.current && currentLocation.pathname !== nextLocation.pathname)
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => formState.isDirty && !saved.current && currentLocation.pathname !== nextLocation.pathname,
+  )
   useEffect(() => {
     const onBeforeUnload = (ev: BeforeUnloadEvent) => {
       if (formState.isDirty && !saved.current) ev.preventDefault()
@@ -270,7 +277,10 @@ function PetForm({ pet }: { pet?: Pet }) {
     async (out) => {
       const data: api.PetInput = {
         ...out,
-        traits: out.traits.split(",").map((t) => t.trim()).filter(Boolean),
+        traits: out.traits
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
         specialNeeds: out.specialNeeds || undefined,
         careNotes: out.careNotes ?? "",
         internalNotes: out.internalNotes || undefined,
@@ -389,7 +399,12 @@ function PetForm({ pet }: { pet?: Pet }) {
           <Field label="Черты характера" required hint="Через запятую: Ласковый, Активный, Игривый" error={e.traits?.message}>
             <Input {...register("traits")} />
           </Field>
-          <Field label="История" required hint="Как попал(а) в приют, что любит. Пишите тепло — это читают будущие хозяева." error={e.story?.message}>
+          <Field
+            label="История"
+            required
+            hint="Как попал(а) в приют, что любит. Пишите тепло — это читают будущие хозяева."
+            error={e.story?.message}
+          >
             <Textarea rows={4} {...register("story")} />
           </Field>
         </Section>

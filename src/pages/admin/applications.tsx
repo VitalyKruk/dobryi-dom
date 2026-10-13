@@ -17,13 +17,7 @@ import { EmptyState, ErrorState } from "@/components/states"
 import { useAuth } from "@/context/auth"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
-import {
-  applicationStatusLabel,
-  experienceLabel,
-  formatDate,
-  housingLabel,
-  visitTimeLabel,
-} from "@/lib/format"
+import { applicationStatusLabel, experienceLabel, formatDate, housingLabel, visitTimeLabel } from "@/lib/format"
 import type { Application, ApplicationStatus, Pet } from "@/lib/types"
 
 const PAGE_SIZE = 15
@@ -36,15 +30,7 @@ const statusTabs: { value: ApplicationStatus | "all"; label: string }[] = [
   { value: "all", label: "Все" },
 ]
 
-function Details({
-  app,
-  pet,
-  onUpdate,
-}: {
-  app: Application
-  pet?: Pet
-  onUpdate: (a: Application) => void
-}) {
+function Details({ app, pet, onUpdate }: { app: Application; pet?: Pet; onUpdate: (a: Application) => void }) {
   const { can } = useAuth()
   const [comment, setComment] = useState("")
   const [busy, setBusy] = useState(false)
@@ -207,8 +193,7 @@ export default function AdminApplicationsPage() {
   const list = apps.filter(
     (a) =>
       (tab === "all" || a.status === tab) &&
-      (!needle ||
-        [a.id, a.name, a.city, a.email, petOf(a)?.name ?? ""].some((v) => v.toLowerCase().includes(needle))),
+      (!needle || [a.id, a.name, a.city, a.email, petOf(a)?.name ?? ""].some((v) => v.toLowerCase().includes(needle))),
   )
   const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
   const current = Math.min(page, pages)

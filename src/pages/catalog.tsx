@@ -25,7 +25,14 @@ const PAGE_SIZE = 12
 type ArrayKey = Exclude<keyof PetFilters, "q" | "sort">
 
 const groups: { key: ArrayKey; title: string; options: { value: string; label: string }[] }[] = [
-  { key: "species", title: "Кто нужен", options: [{ value: "cat", label: "Кошки 🐱" }, { value: "dog", label: "Собаки 🐶" }] },
+  {
+    key: "species",
+    title: "Кто нужен",
+    options: [
+      { value: "cat", label: "Кошки 🐱" },
+      { value: "dog", label: "Собаки 🐶" },
+    ],
+  },
   {
     key: "age",
     title: "Возраст",
@@ -44,7 +51,14 @@ const groups: { key: ArrayKey; title: string; options: { value: string; label: s
       { value: "large", label: "Крупный" },
     ],
   },
-  { key: "sex", title: "Пол", options: [{ value: "male", label: "Мальчик" }, { value: "female", label: "Девочка" }] },
+  {
+    key: "sex",
+    title: "Пол",
+    options: [
+      { value: "male", label: "Мальчик" },
+      { value: "female", label: "Девочка" },
+    ],
+  },
   {
     key: "coat",
     title: "Шерсть",
@@ -218,8 +232,8 @@ function MobileFilters({ value, onApply }: { value: PetFilters; onApply: (f: Pet
               : count === -1
                 ? "Показать"
                 : count === 0
-                ? "Никого не нашли"
-                : `Показать ${count} ${plural(count, ["питомца", "питомца", "питомцев"])}`}
+                  ? "Никого не нашли"
+                  : `Показать ${count} ${plural(count, ["питомца", "питомца", "питомцев"])}`}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -303,7 +317,10 @@ export default function CatalogPage() {
         <div ref={topRef} className="flex min-w-0 scroll-mt-24 flex-col gap-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
                 type="search"
                 value={search}
@@ -374,9 +391,7 @@ export default function CatalogPage() {
           )}
 
           <p aria-live="polite" className="text-sm text-muted-foreground">
-            {status === "success" &&
-              data.total > 0 &&
-              `Нашли ${data.total} ${plural(data.total, ["питомца", "питомца", "питомцев"])}`}
+            {status === "success" && data.total > 0 && `Нашли ${data.total} ${plural(data.total, ["питомца", "питомца", "питомцев"])}`}
           </p>
 
           {status === "error" ? (
@@ -404,10 +419,7 @@ export default function CatalogPage() {
           ) : (
             <div
               aria-busy={status === "loading"}
-              className={cn(
-                "grid gap-4 md:gap-6",
-                view === "grid" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1",
-              )}
+              className={cn("grid gap-4 md:gap-6", view === "grid" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}
             >
               {status === "loading"
                 ? Array.from({ length: 6 }, (_, i) => <PetCardSkeleton key={i} layout={view} />)

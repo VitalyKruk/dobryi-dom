@@ -14,7 +14,8 @@ import { FOUNDED_YEAR, missionPhoto, seedPets, team } from "@/lib/seed"
 
 const gallery = seedPets.filter((p) => ["charli", "leva", "nika", "bonya", "sonya", "keks", "alma", "tuchka"].includes(p.id))
 
-export const MAP_SRC = "https://www.openstreetmap.org/export/embed.html?bbox=30.28%2C59.92%2C30.36%2C59.95&layer=mapnik&marker=59.935%2C30.32"
+export const MAP_SRC =
+  "https://www.openstreetmap.org/export/embed.html?bbox=30.28%2C59.92%2C30.36%2C59.95&layer=mapnik&marker=59.935%2C30.32"
 
 const MAP_LINK = "https://www.openstreetmap.org/?mlat=59.935&mlon=30.32#map=15/59.935/30.32"
 
@@ -66,25 +67,20 @@ export default function AboutPage() {
         <div className="flex flex-col gap-4 text-lg leading-7">
           <h2 className="text-3xl leading-10">Наша история</h2>
           <p>
-            В 2016 году Ольга забрала с трассы двух щенков и поняла, что остановиться уже не сможет. Сначала был гараж
-            и три вольера, потом — первый волонтёр, первый ветеринар и первое «спасибо» от новых хозяев.
+            В 2016 году Ольга забрала с трассы двух щенков и поняла, что остановиться уже не сможет. Сначала был гараж и три вольера, потом
+            — первый волонтёр, первый ветеринар и первое «спасибо» от новых хозяев.
           </p>
           <p>
-            Сегодня у нас тёплые вольеры, кошачьи комнаты, собственный медблок и десятки людей, которые приходят
-            гулять, лечить, фотографировать и просто гладить.
+            Сегодня у нас тёплые вольеры, кошачьи комнаты, собственный медблок и десятки людей, которые приходят гулять, лечить,
+            фотографировать и просто гладить.
           </p>
           <h2 className="mt-4 text-3xl leading-10">Миссия</h2>
           <p>
-            Чтобы каждое животное, попавшее к нам, получило помощь, а каждая встреча с новой семьёй была осознанной — без
-            спешки и с поддержкой после переезда.
+            Чтобы каждое животное, попавшее к нам, получило помощь, а каждая встреча с новой семьёй была осознанной — без спешки и с
+            поддержкой после переезда.
           </p>
         </div>
-        <PetImage
-          src={missionPhoto}
-          alt="Кошка даёт лапу волонтёру"
-          width={720}
-          className="rounded-3xl"
-        />
+        <PetImage src={missionPhoto} alt="Кошка даёт лапу волонтёру" width={720} className="rounded-3xl" />
       </section>
 
       <section className="bg-secondary section-y" aria-labelledby="numbers-title">

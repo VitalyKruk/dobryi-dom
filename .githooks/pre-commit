@@ -1,0 +1,4 @@
+#!/bin/sh
+# Перед каждым коммитом — все линтеры (npm run lint). Включается само при npm install
+# (скрипт prepare → git config core.hooksPath .githooks). Пропустить разово: git commit --no-verify
+exec node scripts/lint.mjs --if-changed

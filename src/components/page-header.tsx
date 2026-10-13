@@ -1,13 +1,6 @@
 import { Fragment, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
 
 export type Crumb = { label: string; to?: string }
