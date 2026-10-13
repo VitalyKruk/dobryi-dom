@@ -22,6 +22,11 @@ services:
       args:
         APK_UPGRADE_DATE: ${APK_UPGRADE_DATE:-unset}
     image: dobryi-dom-api:latest
+    environment:
+      # Supabase (если задан в .env): данные — в Postgres, фото — в Storage; иначе — JSON в томе api-data.
+      # При первом запуске на пустом Supabase туда переносится всё из тома.
+      SUPABASE_URL: ${SUPABASE_DOCKER_URL:-${SUPABASE_URL:-}}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
     volumes:
       - api-data:/data
     restart: unless-stopped
@@ -38,6 +43,8 @@ services:
     environment:
       # На Windows/macOS события файловой системы не доходят в контейнер — следим опросом
       - VITE_POLLING=1
+      # Dev-API хранит данные в JSON (data/db.json), а не в Supabase: два процесса API на одной
+      # базе разошлись бы — у каждого свой кеш в памяти. Supabase использует прод-стек (api).
     volumes:
       - .:/app
       - node_modules:/app/node_modules

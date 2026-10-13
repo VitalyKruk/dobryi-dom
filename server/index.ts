@@ -2,15 +2,20 @@
 import path from "node:path"
 import { createApp } from "./app.ts"
 import { log } from "./logger.ts"
-import { Store } from "./store.ts"
+import { JsonBackend, Store } from "./store.ts"
+import { supabaseFromEnv } from "./supabase.ts"
 
 const PORT = Number(process.env.PORT) || 3001
 const HOST = process.env.HOST ?? "127.0.0.1"
 const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(import.meta.dirname, "..", "data"))
 
-const store = await new Store(DATA_DIR).init()
+// Supabase, если заданы SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY, иначе — JSON-файл в DATA_DIR.
+// При первом запуске на пустом Supabase переносим туда данные и фото из db.json, если он есть.
+const json = new JsonBackend(DATA_DIR)
+const supabase = supabaseFromEnv()
+const store = await (supabase ? new Store(supabase, json) : new Store(json)).init()
 const server = createApp(store).listen(PORT, HOST, () => {
-  log("info", "started", { url: `http://${HOST}:${PORT}/api`, data: store.file, pid: process.pid })
+  log("info", "started", { url: `http://${HOST}:${PORT}/api`, storage: supabase ? "supabase" : "json", data: store.location, source: store.source, pid: process.pid })
 })
 
 // Падение процесса — последнее, что стоит записать в лог перед выходом

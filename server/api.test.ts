@@ -1,6 +1,6 @@
 /* Интеграционные тесты API: npm run test:api (node:test, сервер на временной папке данных) */
 import assert from "node:assert/strict"
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -9,16 +9,25 @@ import { createApp } from "./app.ts"
 
 // Логи запросов в выводе тестов только мешают; LOG_LEVEL=info npm run test:api — чтобы увидеть
 process.env.LOG_LEVEL ??= "silent"
-import { seedDb, Store } from "./store.ts"
+import { JsonBackend, seedDb, Store, type Backend } from "./store.ts"
+import { SupabaseBackend, supabaseFromEnv } from "./supabase.ts"
 import { verifyPassword } from "./auth.ts"
 
 let base = ""
 let dir = ""
 let close: () => void
+/** Новый экземпляр того же хранилища — читает сохранённое, а не память API */
+let freshBackend: () => Backend
 
 before(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "dobryi-dom-test-"))
-  const store = await new Store(dir).init()
+  // TEST_STORAGE=supabase (npm run test:supabase) — тот же набор тестов на Supabase
+  const supabase = process.env.TEST_STORAGE === "supabase" ? supabaseFromEnv() : null
+  if (process.env.TEST_STORAGE === "supabase" && !supabase) throw new Error("TEST_STORAGE=supabase, но в окружении нет SUPABASE_URL")
+  const store = await new Store(supabase ?? dir).init()
+  if (supabase) await store.reset() // чистые демо-данные, как в новой папке
+  freshBackend = () =>
+    supabase ? new SupabaseBackend(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!) : new JsonBackend(dir)
   const server = createApp(store).listen(0, "127.0.0.1")
   await new Promise((r) => server.once("listening", r))
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
@@ -97,8 +106,8 @@ describe("заявки", () => {
     assert.equal(dup.status, 409)
   })
 
-  test("заявка сохраняется в db.json", async () => {
-    const db = JSON.parse(await readFile(path.join(dir, "db.json"), "utf8"))
+  test("заявка сохраняется в хранилище", async () => {
+    const db = (await freshBackend().load())!
     assert.ok(db.applications.some((a: { email: string }) => a.email === "tester@example.com"))
   })
 
@@ -204,8 +213,8 @@ describe("вход и профиль", () => {
     assert.equal((await api("GET", "/api/me", undefined, r.json.token)).status, 401)
   })
 
-  test("пароли в db.json хранятся хешем", async () => {
-    const db = JSON.parse(await readFile(path.join(dir, "db.json"), "utf8"))
+  test("пароли в хранилище — только хеши", async () => {
+    const db = (await freshBackend().load())!
     assert.ok(Object.values(db.passwords).every((h) => String(h).startsWith("scrypt$")))
     assert.ok(!JSON.stringify(db).includes("demo1234"))
   })

@@ -7,17 +7,22 @@
     "dev": "node scripts/dev.mjs",
     "build": "tsc -b && vite build",
     "build:static": "tsc -b && node scripts/build-static.mjs",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:env": "node scripts/supabase-env.mjs",
+    "test:supabase": "node --env-file-if-exists=.env --test --test-concurrency=1 server/supabase.test.ts server/api.supabase.test.ts",
     "lint": "oxlint",
     "preview": "vite preview",
     "security": "node scripts/security-scan.mjs",
     "security:quick": "node scripts/security-scan.mjs --quick",
     "dev:web": "vite",
     "server": "node --watch server/index.ts",
-    "test:api": "node --test server/*.test.ts"
+    "test:api": "node --test server/api.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/nunito-sans": "^5.3.0",
     "@hookform/resolvers": "^5.9.1",
+    "@supabase/supabase-js": "^2.117.3",
     "@tailwindcss/vite": "^4.3.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
@@ -42,6 +47,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "supabase": "^2.120.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }

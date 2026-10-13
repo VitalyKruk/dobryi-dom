@@ -3,8 +3,6 @@
  * createApp не слушает порт — так его удобно поднимать в тестах.
  */
 import { randomBytes } from "node:crypto"
-import { writeFile } from "node:fs/promises"
-import path from "node:path"
 import express, { type Request } from "express"
 import { ADOPTED_BEFORE_SITE } from "../src/lib/seed.ts"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "../src/lib/match.ts"
@@ -17,7 +15,7 @@ import { log, requestLogger } from "./logger.ts"
 import { fakeDoorStats, recordFakeDoor } from "../src/lib/fake-door.ts"
 import { actorOf, filterAudit, maskEmail, petStatusChange, pushAudit, roleChange, statusChange } from "../src/lib/audit.ts"
 import * as s from "./schemas.ts"
-import type { DB, Store } from "./store.ts"
+import { UPLOAD_NAME, uploadType, type DB, type Store } from "./store.ts"
 
 const now = () => new Date().toISOString()
 
@@ -207,20 +205,22 @@ export function createApp(store: Store) {
       const ext = detectImage(body)
       if (!ext) throw new HttpError(415, "Файл не похож на изображение JPG, PNG или WebP")
       const name = `${randomBytes(16).toString("hex")}.${ext}`
-      await writeFile(path.join(store.uploadsDir, name), body)
+      await store.saveUpload(name, body, uploadType(name))
       res.status(201).json({ url: `/uploads/${name}` })
     },
   )
 
-  app.use(
-    "/uploads",
-    express.static(store.uploadsDir, {
-      fallthrough: false,
-      immutable: true,
-      maxAge: "365d",
-      setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
-    }),
-  )
+  // Фото отдаёт API, где бы они ни лежали (папка или Supabase Storage): адрес /uploads/<имя> не меняется.
+  // Имя проверяем по шаблону — путь из запроса до хранилища не доходит.
+  app.get("/uploads/:name", async (req, res) => {
+    const name = req.params.name
+    const body = UPLOAD_NAME.test(name) ? await store.readUpload(name) : null
+    if (!body) throw new HttpError(404, "Не найдено")
+    res.setHeader("Content-Type", uploadType(name))
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable")
+    res.setHeader("X-Content-Type-Options", "nosniff")
+    res.send(body)
+  })
 
   // ——— Статистика ———
 
