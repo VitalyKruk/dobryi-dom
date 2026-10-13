@@ -1,16 +1,16 @@
 /*
- * Проверка хранения в Postgres: npm run test:postgres (нужен запущенный Postgres и DATABASE_URL, см. README).
- * Без DATABASE_URL тесты пропускаются. ВНИМАНИЕ: тест сбрасывает данные в этой базе к демо —
- * не запускайте его на базе с настоящими данными.
+ * Проверка хранения в Postgres: npm run test:postgres (нужен запущенный Postgres и TEST_DATABASE_URL, см. README).
+ * Без TEST_DATABASE_URL тесты пропускаются. Тест сбрасывает данные к демо — только в отдельной базе …_test.
  */
 import assert from "node:assert/strict"
 import { after, describe, test } from "node:test"
 import { Store } from "./store.ts"
-import { PostgresBackend, postgresFromEnv } from "./postgres.ts"
+import { PostgresBackend } from "./postgres.ts"
+import { testDatabaseUrl } from "./test-db.ts"
 
 process.env.LOG_LEVEL ??= "silent"
-const backend = postgresFromEnv()
-const url = process.env.DATABASE_URL ?? ""
+const url = (await testDatabaseUrl()) ?? ""
+const backend = url ? new PostgresBackend(url) : null
 const opened: PostgresBackend[] = backend ? [backend] : []
 const fresh = () => {
   const b = new PostgresBackend(url)
@@ -22,7 +22,7 @@ after(() => Promise.all(opened.map((b) => b.close())))
 /** Данные так, как их увидит API после загрузки: через JSON, без undefined-полей */
 const plain = (v: unknown) => JSON.parse(JSON.stringify(v))
 
-describe("Postgres", { skip: backend ? false : "нет DATABASE_URL — пропускаю" }, () => {
+describe("Postgres", { skip: backend ? false : "нет TEST_DATABASE_URL — пропускаю" }, () => {
   test("демо-данные, изменения и удаления сохраняются в таблицах и читаются обратно", async () => {
     const store = await new Store(backend!).init()
     await store.reset()
