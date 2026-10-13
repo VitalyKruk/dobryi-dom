@@ -12,4 +12,3 @@ dist-static
 .static-cache
 logs
 .env
-supabase

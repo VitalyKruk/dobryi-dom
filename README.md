@@ -59,21 +59,21 @@ REST API на Node 24 + Express 5 в [server/](server/). TypeScript запуск
 | `POST /api/client-errors` | ошибки из браузера → серверный лог (не больше 20 в минуту с одного адреса) | все |
 | `POST /api/fake-doors`, `GET /api/admin/fake-doors` | переход по кнопке функции в разработке; сколько раз нажимали (не больше 30 в минуту с одного адреса) | все / админ |
 
-### Supabase
+### Postgres
 
-Прод-стек (`api`) хранит данные в Postgres Supabase, а фото — в Supabase Storage (бакет `pet-photos`), если в `.env` заданы `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`. Иначе всё по-прежнему хранится в JSON-файле.
+Прод-стек хранит данные и загруженные фото в Postgres — сервис `db` в [compose.yaml](compose.yaml) (образ `postgres:17-alpine`, том `db-data`). Перед первым запуском скопируйте `.env.example` в `.env` и задайте `POSTGRES_PASSWORD`.
 
 ```bash
-npm run supabase:start
+docker compose up -d --build web api
 ```
 
-Затем `npm run supabase:env` записывает в `.env` адрес и ключ локального Supabase, а `docker compose up -d --build web api` поднимает стек на Supabase. Studio открывается на http://127.0.0.1:54323.
-
-- **Схема** лежит в [supabase/migrations](supabase/migrations). На всех таблицах включён RLS без политик: данные доступны только серверу по ключу service_role.
-- **Перенос данных.** При первом запуске на пустом Supabase данные и фото переносятся из `db.json`.
-- **Тесты.** `npm run test:supabase` прогоняет тесты API на Supabase и **сбрасывает его данные к демо**.
-- **Облачный проект.** Впишите его адрес и ключ в `.env` (см. `.env.example`) и примените схему через `npx supabase db push`.
-- **Ограничения.** Один процесс API на базу. Dev-контейнер работает на JSON.
+- **Схема** — [server/schema.sql](server/schema.sql). API применяет её при каждом запуске (`create table if not exists`), отдельных миграций нет. Каждая запись лежит целиком в колонке `data` (jsonb), поля для поиска и сортировки вынесены в колонки.
+- **Фото** — в таблице `uploads` (bytea, до 5 МБ). API отдаёт их по адресу `/uploads/<имя>`.
+- **Запись.** После каждого изменения в базу одной транзакцией уходит только разница: новые и изменённые строки, удаление исчезнувших.
+- **Доступ.** Порт базы открыт только на этом компьютере: `127.0.0.1:5433` (меняется через `DB_PORT`).
+- **Перенос данных.** При первом запуске на пустой базе данные и фото переносятся из тома `api-data` (`db.json` и `uploads/`).
+- **Тесты.** `npm run db:start` поднимает базу, `npm run test:postgres` прогоняет тесты API на Postgres по `DATABASE_URL` из `.env`. Тесты **сбрасывают данные этой базы к демо**.
+- **Ограничения.** Один процесс API на базу. Dev-контейнер и `npm run dev` без `DATABASE_URL` работают на JSON.
 
 ### Логирование
 

@@ -23,12 +23,32 @@ services:
         APK_UPGRADE_DATE: ${APK_UPGRADE_DATE:-unset}
     image: dobryi-dom-api:latest
     environment:
-      # Supabase (если задан в .env): данные — в Postgres, фото — в Storage; иначе — JSON в томе api-data.
-      # При первом запуске на пустом Supabase туда переносится всё из тома.
-      SUPABASE_URL: ${SUPABASE_DOCKER_URL:-${SUPABASE_URL:-}}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      # Данные и загруженные фото — в Postgres (сервис db). При первом запуске на пустой базе
+      # туда переносится всё из тома api-data (db.json и фото), если там что-то есть.
+      DATABASE_URL: postgres://dobryi:${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env — см. .env.example}@db:5432/dobryi_dom
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - api-data:/data
+    restart: unless-stopped
+
+  # Postgres: данные и фото. Порт открыт только на этом компьютере (127.0.0.1) — для тестов и psql
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dobryi_dom
+      POSTGRES_USER: dobryi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env — см. .env.example}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dobryi -d dobryi_dom"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   # Разработка с hot reload: Vite + API в одном контейнере — http://localhost:5173
@@ -43,8 +63,8 @@ services:
     environment:
       # На Windows/macOS события файловой системы не доходят в контейнер — следим опросом
       - VITE_POLLING=1
-      # Dev-API хранит данные в JSON (data/db.json), а не в Supabase: два процесса API на одной
-      # базе разошлись бы — у каждого свой кеш в памяти. Supabase использует прод-стек (api).
+      # Dev-API хранит данные в JSON (data/db.json), а не в Postgres: два процесса API на одной
+      # базе разошлись бы — у каждого свой кеш в памяти. Postgres использует прод-стек (api).
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -52,3 +72,4 @@ services:
 volumes:
   node_modules:
   api-data:
+  db-data:

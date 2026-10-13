@@ -210,7 +210,7 @@ export function createApp(store: Store) {
     },
   )
 
-  // Фото отдаёт API, где бы они ни лежали (папка или Supabase Storage): адрес /uploads/<имя> не меняется.
+  // Фото отдаёт API, где бы они ни лежали (папка или таблица Postgres): адрес /uploads/<имя> не меняется.
   // Имя проверяем по шаблону — путь из запроса до хранилища не доходит.
   app.get("/uploads/:name", async (req, res) => {
     const name = req.params.name

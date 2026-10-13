@@ -10,7 +10,7 @@ import { createApp } from "./app.ts"
 // Логи запросов в выводе тестов только мешают; LOG_LEVEL=info npm run test:api — чтобы увидеть
 process.env.LOG_LEVEL ??= "silent"
 import { JsonBackend, seedDb, Store, type Backend } from "./store.ts"
-import { SupabaseBackend, supabaseFromEnv } from "./supabase.ts"
+import { PostgresBackend, postgresFromEnv } from "./postgres.ts"
 import { verifyPassword } from "./auth.ts"
 
 let base = ""
@@ -18,16 +18,23 @@ let dir = ""
 let close: () => void
 /** Новый экземпляр того же хранилища — читает сохранённое, а не память API */
 let freshBackend: () => Backend
+/** Пулы соединений Postgres, открытые тестами, — закрываем в конце, иначе процесс не завершится */
+const pools: PostgresBackend[] = []
 
 before(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "dobryi-dom-test-"))
-  // TEST_STORAGE=supabase (npm run test:supabase) — тот же набор тестов на Supabase
-  const supabase = process.env.TEST_STORAGE === "supabase" ? supabaseFromEnv() : null
-  if (process.env.TEST_STORAGE === "supabase" && !supabase) throw new Error("TEST_STORAGE=supabase, но в окружении нет SUPABASE_URL")
-  const store = await new Store(supabase ?? dir).init()
-  if (supabase) await store.reset() // чистые демо-данные, как в новой папке
-  freshBackend = () =>
-    supabase ? new SupabaseBackend(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!) : new JsonBackend(dir)
+  // TEST_STORAGE=postgres (npm run test:postgres) — тот же набор тестов на Postgres
+  const postgres = process.env.TEST_STORAGE === "postgres" ? postgresFromEnv() : null
+  if (process.env.TEST_STORAGE === "postgres" && !postgres) throw new Error("TEST_STORAGE=postgres, но в окружении нет DATABASE_URL")
+  if (postgres) pools.push(postgres)
+  const store = await new Store(postgres ?? dir).init()
+  if (postgres) await store.reset() // чистые демо-данные, как в новой папке
+  freshBackend = () => {
+    if (!postgres) return new JsonBackend(dir)
+    const b = new PostgresBackend(process.env.DATABASE_URL!)
+    pools.push(b)
+    return b
+  }
   const server = createApp(store).listen(0, "127.0.0.1")
   await new Promise((r) => server.once("listening", r))
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
@@ -35,6 +42,7 @@ before(async () => {
 })
 
 after(async () => {
+  await Promise.all(pools.map((p) => p.close()))
   close()
   await rm(dir, { recursive: true, force: true })
 })
