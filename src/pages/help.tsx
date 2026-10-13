@@ -107,7 +107,9 @@ function VolunteerForm() {
                     key={d}
                     className={cn(
                       "flex h-12 min-w-16 cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 font-semibold transition has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-ring",
-                      checked ? "border-secondary-foreground bg-accent text-secondary-foreground" : "border-input/50 hover:border-secondary-border",
+                      checked
+                        ? "border-secondary-foreground bg-accent text-secondary-foreground"
+                        : "border-input/50 hover:border-secondary-border",
                     )}
                   >
                     <Checkbox
@@ -153,7 +155,9 @@ function Donate() {
                 onClick={() => setAmount(a)}
                 className={cn(
                   "h-12 rounded-lg border px-6 text-lg font-bold transition",
-                  amount === a ? "border-secondary-foreground bg-accent text-secondary-foreground" : "border-input/50 hover:border-secondary-border",
+                  amount === a
+                    ? "border-secondary-foreground bg-accent text-secondary-foreground"
+                    : "border-input/50 hover:border-secondary-border",
                 )}
               >
                 {formatNumber(a)} ₽
@@ -166,7 +170,9 @@ function Donate() {
               onClick={() => setAmount("custom")}
               className={cn(
                 "h-12 rounded-lg border px-6 text-lg font-bold transition",
-                amount === "custom" ? "border-secondary-foreground bg-accent text-secondary-foreground" : "border-input/50 hover:border-secondary-border",
+                amount === "custom"
+                  ? "border-secondary-foreground bg-accent text-secondary-foreground"
+                  : "border-input/50 hover:border-secondary-border",
               )}
             >
               Своя сумма
@@ -175,7 +181,12 @@ function Donate() {
         </FieldSet>
         {amount === "custom" && (
           <Field label="Ваша сумма, ₽" hint="От 50 ₽" error={custom && !valid ? "Минимальная сумма — 50 ₽" : undefined}>
-            <Input inputMode="numeric" value={custom} onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 7))} autoFocus />
+            <Input
+              inputMode="numeric"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 7))}
+              autoFocus
+            />
           </Field>
         )}
         <p className="text-muted-foreground">

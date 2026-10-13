@@ -90,8 +90,7 @@ export default function AdminPetsPage() {
   const toggleSort = (key: "name" | "addedAt") =>
     setSort((s) => ({ key, dir: s.key === key ? ((s.dir * -1) as 1 | -1) : key === "name" ? 1 : -1 }))
 
-  const ariaSort = (key: "name" | "addedAt") =>
-    sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : "none"
+  const ariaSort = (key: "name" | "addedAt") => (sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : "none")
 
   const actions = (p: Pet) => (
     <DropdownMenu>
@@ -137,7 +136,10 @@ export default function AdminPetsPage() {
 
       <div className="flex flex-col gap-2 md:flex-row">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             type="search"
             value={q}
@@ -285,8 +287,8 @@ export default function AdminPetsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить карточку «{toDelete?.name}»?</AlertDialogTitle>
             <AlertDialogDescription>
-              Карточка пропадёт с сайта вместе с фото. Если питомец нашёл дом — лучше поставьте статус «Уже дома», чтобы он
-              остался в статистике.
+              Карточка пропадёт с сайта вместе с фото. Если питомец нашёл дом — лучше поставьте статус «Уже дома», чтобы он остался в
+              статистике.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

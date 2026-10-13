@@ -20,12 +20,10 @@ function Hero() {
         <p className="inline-flex items-center gap-2 rounded-lg bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
           <PawIcon className="size-4" /> Приют для кошек и собак
         </p>
-        <h1 className="text-4xl leading-12 md:text-5xl md:leading-14">
-          Найди друга, который уже ждёт тебя&nbsp;🐾
-        </h1>
+        <h1 className="text-4xl leading-12 md:text-5xl md:leading-14">Найди друга, который уже ждёт тебя&nbsp;🐾</h1>
         <p className="max-w-xl text-lg leading-7 text-muted-foreground">
-          Здесь живут кошки и собаки, которым очень нужен дом. Познакомьтесь с ними онлайн, приезжайте в гости — а
-          дальше мы поможем на каждом шаге.
+          Здесь живут кошки и собаки, которым очень нужен дом. Познакомьтесь с ними онлайн, приезжайте в гости — а дальше мы поможем на
+          каждом шаге.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button asChild size="lg">
@@ -38,29 +36,32 @@ function Hero() {
           </Button>
         </div>
         {stats.status !== "error" && (
-        <dl className="mt-4 grid w-full max-w-md grid-cols-2 gap-4">
-          {[
-            { value: stats.data?.adopted, label: (n: number) => `${plural(n, ["питомец нашёл", "питомца нашли", "питомцев нашли"])} дом` },
-            { value: stats.data?.waiting, label: (n: number) => `${plural(n, ["ждёт", "ждут", "ждут"])} сейчас` },
-          ].map((s, i) => (
-            <div key={i} className="rounded-2xl bg-card p-4 ring-1 ring-foreground/5">
-              <dt className="sr-only">{i === 0 ? "Нашли дом" : "Ждут сейчас"}</dt>
-              <dd className="flex flex-col gap-1">
-                {s.value === undefined ? (
-                  <>
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-4 w-28" />
-                  </>
-                ) : (
-                  <>
-                    <span className="text-3xl leading-10 font-extrabold text-secondary-foreground">{formatNumber(s.value)}</span>
-                    <span className="text-sm text-muted-foreground">{s.label(s.value)}</span>
-                  </>
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
+          <dl className="mt-4 grid w-full max-w-md grid-cols-2 gap-4">
+            {[
+              {
+                value: stats.data?.adopted,
+                label: (n: number) => `${plural(n, ["питомец нашёл", "питомца нашли", "питомцев нашли"])} дом`,
+              },
+              { value: stats.data?.waiting, label: (n: number) => `${plural(n, ["ждёт", "ждут", "ждут"])} сейчас` },
+            ].map((s, i) => (
+              <div key={i} className="rounded-2xl bg-card p-4 ring-1 ring-foreground/5">
+                <dt className="sr-only">{i === 0 ? "Нашли дом" : "Ждут сейчас"}</dt>
+                <dd className="flex flex-col gap-1">
+                  {s.value === undefined ? (
+                    <>
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-4 w-28" />
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl leading-10 font-extrabold text-secondary-foreground">{formatNumber(s.value)}</span>
+                      <span className="text-sm text-muted-foreground">{s.label(s.value)}</span>
+                    </>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
         )}
       </div>
       <div className="relative grid grid-cols-2 gap-4" aria-hidden="true">
@@ -202,9 +203,27 @@ function Reviews() {
 }
 
 const helpCards = [
-  { icon: HandHeart, title: "Стать волонтёром", text: "Выгул, уход, фото, автопомощь — найдём дело по душе и по графику.", to: "/help#volunteer", cta: "Стать волонтёром" },
-  { icon: HandCoins, title: "Сделать донат", text: "Даже 300 ₽ — это неделя корма для кошки. Отчитываемся за каждый рубль.", to: "/help#donate", cta: "Помочь деньгами" },
-  { icon: HomeIcon, title: "Забрать питомца", text: "Самая большая помощь — подарить кому-то из хвостов свой дом.", to: "/catalog", cta: "Выбрать друга" },
+  {
+    icon: HandHeart,
+    title: "Стать волонтёром",
+    text: "Выгул, уход, фото, автопомощь — найдём дело по душе и по графику.",
+    to: "/help#volunteer",
+    cta: "Стать волонтёром",
+  },
+  {
+    icon: HandCoins,
+    title: "Сделать донат",
+    text: "Даже 300 ₽ — это неделя корма для кошки. Отчитываемся за каждый рубль.",
+    to: "/help#donate",
+    cta: "Помочь деньгами",
+  },
+  {
+    icon: HomeIcon,
+    title: "Забрать питомца",
+    text: "Самая большая помощь — подарить кому-то из хвостов свой дом.",
+    to: "/catalog",
+    cta: "Выбрать друга",
+  },
 ]
 
 function HowToHelp() {

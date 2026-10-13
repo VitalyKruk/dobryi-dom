@@ -148,8 +148,8 @@ function Success({ app, pet }: { app: Application; pet: Pet }) {
         Ура! Заявка отправлена 🐾
       </h1>
       <p className="max-w-xl text-lg leading-7 text-muted-foreground">
-        Мы свяжемся с вами в течение 1–2 дней. Номер заявки — <b className="text-foreground">{app.id}</b>, {pet.name} уже
-        навострил{pet.sex === "female" ? "а" : ""} уши.
+        Мы свяжемся с вами в течение 1–2 дней. Номер заявки — <b className="text-foreground">{app.id}</b>, {pet.name} уже навострил
+        {pet.sex === "female" ? "а" : ""} уши.
       </p>
       <ol className="grid w-full max-w-3xl gap-4 text-left md:grid-cols-3">
         {[
@@ -340,16 +340,9 @@ function ApplyForm({ pet }: { pet: Pet }) {
 
   if (sent) return <Success app={sent} pet={pet} />
 
-
   return (
     <div className="container-page flex flex-col gap-6 pt-6 pb-16 md:pt-8 md:pb-24">
-      <Crumbs
-        items={[
-          { label: "Каталог", to: "/catalog" },
-          { label: pet.name, to: `/pet/${pet.id}` },
-          { label: "Заявка" },
-        ]}
-      />
+      <Crumbs items={[{ label: "Каталог", to: "/catalog" }, { label: pet.name, to: `/pet/${pet.id}` }, { label: "Заявка" }]} />
       <div className="grid gap-8 lg:grid-cols-[1fr_320px] lg:gap-12">
         <div className="order-2 flex flex-col gap-8 rounded-3xl bg-card p-6 ring-1 ring-foreground/5 md:p-8 lg:order-1">
           <div className="flex flex-col gap-2">

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/lib/api-static.ts", "server/**/*.test.ts", "scripts/*.mjs"],
+  "project": ["src/**/*.{ts,tsx,css}", "server/**/*.ts", "scripts/**/*.mjs"],
+  "ignore": ["src/components/ui/**"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["oxlint"]
+}

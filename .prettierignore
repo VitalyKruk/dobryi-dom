@@ -1,0 +1,17 @@
+dist
+dist-static
+node_modules
+data
+logs
+.security
+.static-cache
+package-lock.json
+PROMPTS.txt
+docs
+src/components/ui
+# Демо-данные записаны компактно, по строке на запись, — так их удобнее читать
+src/lib/seed.ts
+src/lib/seed-history.ts
+# Файлы из шаблонов shadcn и исходное ТЗ — не наш код
+src/shadcn-tailwind.css
+PROMPT.md

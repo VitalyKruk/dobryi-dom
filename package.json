@@ -9,13 +9,16 @@
     "build:static": "tsc -b && node scripts/build-static.mjs",
     "db:start": "docker compose up -d --wait db",
     "test:postgres": "node --env-file-if-exists=.env --test --test-concurrency=1 server/postgres.test.ts server/api.postgres.test.ts",
-    "lint": "oxlint",
+    "lint": "node scripts/lint.mjs",
     "preview": "vite preview",
     "security": "node scripts/security-scan.mjs",
     "security:quick": "node scripts/security-scan.mjs --quick",
     "dev:web": "vite",
     "server": "node --watch server/index.ts",
-    "test:api": "node --test server/api.test.ts"
+    "test:api": "node --test server/api.test.ts",
+    "lint:fix": "node scripts/lint.mjs --fix",
+    "format": "prettier --write .",
+    "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
     "@fontsource-variable/nunito-sans": "^5.3.0",
@@ -26,7 +29,6 @@
     "embla-carousel-react": "^8.6.0",
     "express": "^5.2.1",
     "lucide-react": "^1.48.0",
-    "next-themes": "^0.4.6",
     "pg": "^8.23.1",
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",
@@ -45,7 +47,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "knip": "^6.41.0",
     "oxlint": "^1.81.0",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }

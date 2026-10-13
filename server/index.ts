@@ -15,7 +15,13 @@ const json = new JsonBackend(DATA_DIR)
 const postgres = postgresFromEnv()
 const store = await (postgres ? new Store(postgres, json) : new Store(json)).init()
 const server = createApp(store).listen(PORT, HOST, () => {
-  log("info", "started", { url: `http://${HOST}:${PORT}/api`, storage: postgres ? "postgres" : "json", data: store.location, source: store.source, pid: process.pid })
+  log("info", "started", {
+    url: `http://${HOST}:${PORT}/api`,
+    storage: postgres ? "postgres" : "json",
+    data: store.location,
+    source: store.source,
+    pid: process.pid,
+  })
 })
 
 // Падение процесса — последнее, что стоит записать в лог перед выходом

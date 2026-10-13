@@ -72,7 +72,10 @@ function Insights({ items }: { items: Insight[] }) {
           return (
             <li key={it.title}>
               {it.link ? (
-                <Link to={it.link} className="flex h-full gap-4 rounded-2xl bg-card p-4 ring-1 ring-foreground/5 transition hover:ring-secondary-border">
+                <Link
+                  to={it.link}
+                  className="flex h-full gap-4 rounded-2xl bg-card p-4 ring-1 ring-foreground/5 transition hover:ring-secondary-border"
+                >
                   {body}
                 </Link>
               ) : (
@@ -326,27 +329,31 @@ export default function DashboardPage() {
                     </li>
                   ))
                 : d.apps.length === 0
-                  ? [<li key="empty" className="py-4 text-muted-foreground">Заявок пока нет — как только кто-то откликнется, они появятся здесь.</li>]
+                  ? [
+                      <li key="empty" className="py-4 text-muted-foreground">
+                        Заявок пока нет — как только кто-то откликнется, они появятся здесь.
+                      </li>,
+                    ]
                   : d.apps.slice(0, 5).map((a) => {
-                    const pet = d.pets.find((p) => p.id === a.petId)
-                    return (
-                      <li key={a.id}>
-                        <Link
-                          to={`/admin/applications?id=${a.id}`}
-                          className="flex items-center gap-4 rounded-lg py-4 transition hover:bg-muted/50"
-                        >
-                          <PetImage src={pet?.photos[0]} alt="" width={96} ratio={1} className="size-10 shrink-0 rounded-lg" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-semibold">
-                              {a.name} → {pet?.name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{formatDate(a.createdAt)}</p>
-                          </div>
-                          <ApplicationStatusBadge status={a.status} />
-                        </Link>
-                      </li>
-                    )
-                  })}
+                      const pet = d.pets.find((p) => p.id === a.petId)
+                      return (
+                        <li key={a.id}>
+                          <Link
+                            to={`/admin/applications?id=${a.id}`}
+                            className="flex items-center gap-4 rounded-lg py-4 transition hover:bg-muted/50"
+                          >
+                            <PetImage src={pet?.photos[0]} alt="" width={96} ratio={1} className="size-10 shrink-0 rounded-lg" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold">
+                                {a.name} → {pet?.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{formatDate(a.createdAt)}</p>
+                            </div>
+                            <ApplicationStatusBadge status={a.status} />
+                          </Link>
+                        </li>
+                      )
+                    })}
             </ul>
           </section>
         )}
@@ -370,22 +377,26 @@ export default function DashboardPage() {
                   </li>
                 ))
               : longest.length === 0
-                ? [<li key="empty" className="py-4 text-muted-foreground">Свободных питомцев нет — все хвосты дома или забронированы 🎉</li>]
+                ? [
+                    <li key="empty" className="py-4 text-muted-foreground">
+                      Свободных питомцев нет — все хвосты дома или забронированы 🎉
+                    </li>,
+                  ]
                 : longest.map((p) => {
-                  const n = daysWaiting(p.addedAt)
-                  return (
-                    <li key={p.id} className="flex items-center gap-4 py-4">
-                      <PetImage src={p.photos[0]} alt="" width={96} ratio={1} className="size-10 shrink-0 rounded-lg" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold">{p.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          В приюте {n} {plural(n, ["день", "дня", "дней"])}
-                        </p>
-                      </div>
-                      <PetStatusBadge status={p.status} sex={p.sex} />
-                    </li>
-                  )
-                })}
+                    const n = daysWaiting(p.addedAt)
+                    return (
+                      <li key={p.id} className="flex items-center gap-4 py-4">
+                        <PetImage src={p.photos[0]} alt="" width={96} ratio={1} className="size-10 shrink-0 rounded-lg" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold">{p.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            В приюте {n} {plural(n, ["день", "дня", "дней"])}
+                          </p>
+                        </div>
+                        <PetStatusBadge status={p.status} sex={p.sex} />
+                      </li>
+                    )
+                  })}
           </ul>
           <p className="text-sm text-muted-foreground">Идея: сделайте им новые фото и расскажите о них в соцсетях 📸</p>
         </section>

@@ -65,7 +65,10 @@ export default function AdminAuditPage() {
   const [q, setQ] = useState(sp.get("q") ?? "")
   const debounced = useDebounce(q, 300)
 
-  const data = useAsync(() => api.listAudit({ group: group || undefined, q: debounced, page, pageSize: PAGE_SIZE }), [group, debounced, page])
+  const data = useAsync(
+    () => api.listAudit({ group: group || undefined, q: debounced, page, pageSize: PAGE_SIZE }),
+    [group, debounced, page],
+  )
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(sp)
@@ -81,10 +84,7 @@ export default function AdminAuditPage() {
 
   return (
     <>
-      <AdminHeading
-        title="Журнал действий"
-        subtitle="Кто и когда менял данные приюта: заявки, питомцев, роли, входы в систему."
-      />
+      <AdminHeading title="Журнал действий" subtitle="Кто и когда менял данные приюта: заявки, питомцев, роли, входы в систему." />
 
       <Tabs value={group || "all"} onValueChange={(v) => setParam("group", v === "all" ? null : v)}>
         <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">

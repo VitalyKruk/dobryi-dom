@@ -54,7 +54,13 @@ const TABLES: Table[] = [
     jsonb: [],
     rows: (db) => db.sessions.map((s) => ({ token: s.token, user_id: s.userId, created_at: s.createdAt })),
   },
-  { name: "volunteers", key: "id", columns: ["id", "data"], jsonb: ["data"], rows: (db) => db.volunteers.map((v) => ({ id: v.id, data: v })) },
+  {
+    name: "volunteers",
+    key: "id",
+    columns: ["id", "data"],
+    jsonb: ["data"],
+    rows: (db) => db.volunteers.map((v) => ({ id: v.id, data: v })),
+  },
   {
     name: "audit",
     key: "id",
@@ -69,7 +75,13 @@ const TABLES: Table[] = [
     jsonb: ["data"],
     rows: (db) => db.volunteerRequests.map((data, pos) => ({ pos, data })),
   },
-  { name: "feedback", key: "pos", columns: ["pos", "data"], jsonb: ["data"], rows: (db) => db.feedback.map((data, pos) => ({ pos, data })) },
+  {
+    name: "feedback",
+    key: "pos",
+    columns: ["pos", "data"],
+    jsonb: ["data"],
+    rows: (db) => db.feedback.map((data, pos) => ({ pos, data })),
+  },
   { name: "subscribers", key: "email", columns: ["email"], jsonb: [], rows: (db) => db.subscribers.map((email) => ({ email })) },
   {
     name: "fake_doors",
@@ -81,7 +93,8 @@ const TABLES: Table[] = [
   { name: "meta", key: "key", columns: ["key", "value"], jsonb: ["value"], rows: (db) => [{ key: "seq", value: db.seq }] },
 ]
 
-const chunks = <T>(list: T[], size = 200) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size))
+const chunks = <T>(list: T[], size = 200) =>
+  Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size))
 const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v))
 
 /** Пароль из адреса подключения в лог не попадает */
@@ -144,7 +157,9 @@ export class PostgresBackend implements Backend {
       volunteerRequests: requests.map((r) => r.data as DB["volunteerRequests"][number]),
       feedback: feedback.map((r) => r.data as DB["feedback"][number]),
       subscribers: subscribers.map((r) => r.email as string),
-      fakeDoors: Object.fromEntries(fakeDoors.map((r) => [r.feature as string, { count: r.count as number, lastAt: iso(r.last_at) }])) as FakeDoorCounters,
+      fakeDoors: Object.fromEntries(
+        fakeDoors.map((r) => [r.feature as string, { count: r.count as number, lastAt: iso(r.last_at) }]),
+      ) as FakeDoorCounters,
       seq,
     }
     // Запоминаем, что уже лежит в базе, — следующее сохранение отправит только разницу

@@ -32,9 +32,7 @@ export function RequireAuth({ permission, children }: { permission?: Permission;
           illustration={<SadDog className="h-32 w-auto md:h-40" />}
           title={staff ? "Этот раздел — только для администратора" : "Сюда могут только сотрудники приюта"}
           text={
-            staff
-              ? "Если вам нужен доступ, попросите администратора приюта."
-              : "Если вы волонтёр, попросите администратора выдать доступ."
+            staff ? "Если вам нужен доступ, попросите администратора приюта." : "Если вы волонтёр, попросите администратора выдать доступ."
           }
           action={
             <Button asChild variant="outline">

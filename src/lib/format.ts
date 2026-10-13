@@ -26,10 +26,7 @@ export function plural(n: number, forms: [string, string, string]) {
 
 export function ageInMonths(birthDate: string, now = new Date()) {
   const b = new Date(birthDate)
-  return Math.max(
-    0,
-    (now.getFullYear() - b.getFullYear()) * 12 + now.getMonth() - b.getMonth(),
-  )
+  return Math.max(0, (now.getFullYear() - b.getFullYear()) * 12 + now.getMonth() - b.getMonth())
 }
 
 export function formatAge(birthDate: string) {
@@ -49,8 +46,7 @@ export function isNew(pet: Pet) {
 export const g = (sex: Sex, m: string, f: string) => (sex === "female" ? f : m)
 
 export const speciesLabel: Record<Species, string> = { cat: "Кошка", dog: "Собака" }
-export const speciesLabelBySex = (s: Species, sex: Sex) =>
-  s === "cat" ? g(sex, "Кот", "Кошка") : g(sex, "Пёс", "Собака")
+export const speciesLabelBySex = (s: Species, sex: Sex) => (s === "cat" ? g(sex, "Кот", "Кошка") : g(sex, "Пёс", "Собака"))
 export const sexLabel: Record<Sex, string> = { male: "Мальчик", female: "Девочка" }
 export const sizeLabel: Record<PetSize, string> = {
   small: "Маленький",

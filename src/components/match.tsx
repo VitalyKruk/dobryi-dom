@@ -48,7 +48,10 @@ export function MatchCard({ match }: { match: Match }) {
         {reasons.length > 0 && (
           <ul className="mt-2 flex flex-wrap gap-2" aria-label="Почему подходит">
             {reasons.map((r) => (
-              <li key={r} className="inline-flex items-center gap-1 rounded-lg bg-success px-2 py-1 text-xs font-semibold text-success-foreground">
+              <li
+                key={r}
+                className="inline-flex items-center gap-1 rounded-lg bg-success px-2 py-1 text-xs font-semibold text-success-foreground"
+              >
                 <Check className="size-3.5" aria-hidden="true" />
                 {r}
               </li>
@@ -81,11 +84,55 @@ type Answers = {
 }
 
 const questions: { key: keyof Answers; label: string; options: [string, string][] }[] = [
-  { key: "species", label: "Кого ищете", options: [["any", "Не важно"], ["cat", "Кошку"], ["dog", "Собаку"]] },
-  { key: "housing", label: "Где живёте", options: [["any", "Не важно"], ["apartment", "Квартира"], ["house", "Частный дом"], ["other", "Другое"]] },
-  { key: "kids", label: "Дети до 10 лет", options: [["any", "Не важно"], ["yes", "Есть"], ["no", "Нет"]] },
-  { key: "other", label: "Кто уже живёт дома", options: [["any", "Не важно"], ["none", "Никого"], ["cat", "Кошка"], ["dog", "Собака"], ["both", "Кошка и собака"]] },
-  { key: "experience", label: "Опыт", options: [["any", "Не важно"], ["none", "Первый питомец"], ["some", "Были раньше"], ["experienced", "Большой опыт"]] },
+  {
+    key: "species",
+    label: "Кого ищете",
+    options: [
+      ["any", "Не важно"],
+      ["cat", "Кошку"],
+      ["dog", "Собаку"],
+    ],
+  },
+  {
+    key: "housing",
+    label: "Где живёте",
+    options: [
+      ["any", "Не важно"],
+      ["apartment", "Квартира"],
+      ["house", "Частный дом"],
+      ["other", "Другое"],
+    ],
+  },
+  {
+    key: "kids",
+    label: "Дети до 10 лет",
+    options: [
+      ["any", "Не важно"],
+      ["yes", "Есть"],
+      ["no", "Нет"],
+    ],
+  },
+  {
+    key: "other",
+    label: "Кто уже живёт дома",
+    options: [
+      ["any", "Не важно"],
+      ["none", "Никого"],
+      ["cat", "Кошка"],
+      ["dog", "Собака"],
+      ["both", "Кошка и собака"],
+    ],
+  },
+  {
+    key: "experience",
+    label: "Опыт",
+    options: [
+      ["any", "Не важно"],
+      ["none", "Первый питомец"],
+      ["some", "Были раньше"],
+      ["experienced", "Большой опыт"],
+    ],
+  },
 ]
 
 function answersFromProfile(p: MatchProfile): Answers {

@@ -26,7 +26,10 @@ const reasonAdvice: [RegExp, string | null][] = [
   [/на улице|вольер|цеп/i, "Напишите на странице «Как взять питомца», что питомцы живут только в доме."],
   [/связаться|не отвеча/i, "Спрашивайте в анкете удобное время для звонка и дублируйте приглашение в мессенджер."],
   [/командиров|оставить .* не с кем/i, "Предлагайте таким кандидатам стать волонтёрами или взять питомца на передержку."],
-  [/кошк|собак|детей|дет[иья]/i, "Показывайте совместимость с детьми и животными крупнее — подбор «Подходят вам» уже не предлагает таких питомцев."],
+  [
+    /кошк|собак|детей|дет[иья]/i,
+    "Показывайте совместимость с детьми и животными крупнее — подбор «Подходят вам» уже не предлагает таких питомцев.",
+  ],
   [/тесно|квартир/i, "Подбор «Подходят вам» учитывает жильё — советуйте кандидатам начинать с него."],
 ]
 const adviceFor = (reason: string) => {
@@ -48,7 +51,12 @@ export function buildAnalytics(pets: Pet[], apps: Application[], now = Date.now(
   const firstWeek = weekStart(now) - (WEEKS - 1) * 7 * DAY
   const weeks: WeekPoint[] = Array.from({ length: WEEKS }, (_, i) => ({
     start: new Date(firstWeek + i * 7 * DAY).toISOString(),
-    total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0, adopted: 0,
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    cancelled: 0,
+    adopted: 0,
   }))
   const weekOf = (t: number) => Math.floor((weekStart(t) - firstWeek) / (7 * DAY))
   const inPeriod = apps.filter((a) => time(a.createdAt) >= firstWeek)
@@ -134,7 +142,10 @@ export function buildAnalytics(pets: Pet[], apps: Application[], now = Date.now(
     })
   }
   if (forgotten.length) {
-    const names = forgotten.slice(0, 3).map((p) => p.name).join(", ")
+    const names = forgotten
+      .slice(0, 3)
+      .map((p) => p.name)
+      .join(", ")
     insights.push({
       tone: "warning",
       title: `${forgotten.length} ${plural(forgotten.length, ["питомец", "питомца", "питомцев"])} без заявок за последний месяц`,
@@ -160,7 +171,11 @@ export function buildAnalytics(pets: Pet[], apps: Application[], now = Date.now(
     insights.push({
       tone: "info",
       title: low.species === "cat" ? "На кошек заявок меньше" : "На собак заявок меньше",
-      text: `${demand(low).toFixed(1).replace(".", ",")} заявки на одного ${low.species === "cat" ? "кота" : "пса"} против ${demand(low === cats ? dogs : cats).toFixed(1).replace(".", ",")}. Поднимите их в «Питомцах недели» на главной.`,
+      text: `${demand(low).toFixed(1).replace(".", ",")} заявки на одного ${low.species === "cat" ? "кота" : "пса"} против ${demand(
+        low === cats ? dogs : cats,
+      )
+        .toFixed(1)
+        .replace(".", ",")}. Поднимите их в «Питомцах недели» на главной.`,
     })
   }
   if (prev4 > 0) {

@@ -11,16 +11,7 @@ import { FavoriteButton, NewBadge, PetCard, PetCardSkeleton, PetImage, PetStatus
 import { ErrorState } from "@/components/states"
 import { useAsync } from "@/hooks/use-async"
 import * as api from "@/lib/api"
-import {
-  coatLabel,
-  compatLabel,
-  formatAge,
-  g,
-  isNew,
-  sexLabel,
-  sizeLabel,
-  speciesLabelBySex,
-} from "@/lib/format"
+import { coatLabel, compatLabel, formatAge, g, isNew, sexLabel, sizeLabel, speciesLabelBySex } from "@/lib/format"
 import type { Compat, Pet } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import NotFoundPage from "./not-found"
@@ -300,8 +291,8 @@ export default function PetPage() {
                 {pet.status === "reserved" && (
                   <p className="flex gap-2 rounded-2xl bg-warning p-4 text-sm text-warning-foreground">
                     <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    {g(pet.sex, "Его", "Её")} уже забронировали, но заявку оставить можно: если знакомство не сложится, мы
-                    позвоним вам первыми.
+                    {g(pet.sex, "Его", "Её")} уже забронировали, но заявку оставить можно: если знакомство не сложится, мы позвоним вам
+                    первыми.
                   </p>
                 )}
                 <Button asChild size="lg" className="h-14 text-lg">

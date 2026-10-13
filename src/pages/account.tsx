@@ -166,9 +166,7 @@ export function FavoritesGrid() {
   if (status === "error") return <ErrorState onRetry={reload} />
   return (
     <div className="grid gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
-      {status === "loading"
-        ? favorites.map((id) => <PetCardSkeleton key={id} />)
-        : data.map((p) => <PetCard key={p.id} pet={p} />)}
+      {status === "loading" ? favorites.map((id) => <PetCardSkeleton key={id} />) : data.map((p) => <PetCard key={p.id} pet={p} />)}
     </div>
   )
 }
@@ -176,9 +174,7 @@ export function FavoritesGrid() {
 const profileSchema = z.object({
   name: z.string().trim().min(2, { error: "Нужно хотя бы 2 буквы" }),
   email: z.email({ error: "Проверьте адрес — похоже, в нём опечатка" }),
-  phone: z
-    .string()
-    .refine((v) => v === "" || v.replace(/\D/g, "").length === 11, { error: "Кажется, в номере не хватает цифр" }),
+  phone: z.string().refine((v) => v === "" || v.replace(/\D/g, "").length === 11, { error: "Кажется, в номере не хватает цифр" }),
   city: z.string().trim(),
 })
 
