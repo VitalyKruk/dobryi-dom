@@ -19,6 +19,19 @@ jobs:
   check:
     name: Линтер и сборка
     runs-on: ubuntu-latest
+    # Postgres для тех же тестов API на настоящей базе (npm run test:postgres)
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: dobryi_dom
+          POSTGRES_USER: dobryi
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U dobryi -d dobryi_dom"
+          --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -29,6 +42,9 @@ jobs:
       - run: npm run lint
       - run: npm run build # включает tsc -b
       - run: npm run test:api # интеграционные тесты API (node:test)
+      - run: npm run test:postgres # те же тесты на Postgres
+        env:
+          DATABASE_URL: postgres://dobryi:ci-only-password@127.0.0.1:5433/dobryi_dom
 
   docker:
     name: Образ Docker
@@ -94,8 +110,11 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
-      - name: Smoke-тест стека (nginx → API)
+      - name: Smoke-тест стека (nginx → API → Postgres)
+        env:
+          POSTGRES_PASSWORD: ci-only-password
         run: |
+          docker compose pull db
           docker compose up -d --no-build --wait web api
           B=http://localhost:8081
           curl -fs $B/healthz | grep -q ok
@@ -111,11 +130,13 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/applications -H 'content-type: application/json' -d '{}')" = 400
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/uploads -H 'content-type: image/png' --data-binary x)" = 401
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/applications -H 'content-type: application/json'             -d '{"petId":"bublik","name":"CI Test","phone":"+7 (900) 000-00-00","email":"ci@example.com","city":"SPb","housing":"house","hasOtherPets":false,"experience":"some","preferredTime":"weekend"}')" = 201
-          docker compose exec -T api grep -q ci@example.com /data/db.json
+          docker compose exec -T db psql -U dobryi -d dobryi_dom -tAc "select count(*) from applications where email = 'ci@example.com'" | grep -qx 1
 
       - name: Логи контейнеров
         if: failure()
-        run: docker compose logs web api
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+        run: docker compose logs web api db
 
       - name: Вход в GHCR
         if: github.event_name != 'pull_request'

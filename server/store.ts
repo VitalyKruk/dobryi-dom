@@ -2,8 +2,8 @@
  * Хранилище данных API. Все данные держим в памяти (их немного — сотни записей), изменения
  * идут строго по очереди, а сохраняет их подключаемый бэкенд:
  *
- *   - JsonBackend — один файл data/db.json + папка data/uploads (тесты, запуск без Supabase);
- *   - SupabaseBackend (server/supabase.ts) — таблицы Postgres и Storage в Supabase.
+ *   - JsonBackend — один файл data/db.json + папка data/uploads (тесты, запуск без Postgres);
+ *   - PostgresBackend (server/postgres.ts) — таблицы Postgres, фото в таблице uploads.
  *
  * Код маршрутов (app.ts) от бэкенда не зависит: он работает со store.db и store.write().
  * Ограничение: один процесс API на базу — кеш в памяти не синхронизируется между процессами.
@@ -60,7 +60,7 @@ export async function seedDb(): Promise<DB> {
 
 /** Куда сохраняются данные и фото */
 export interface Backend {
-  /** для лога при запуске: путь к файлу или адрес Supabase */
+  /** для лога при запуске: путь к файлу или адрес базы */
   readonly location: string
   /** null — хранилище пустое (первый запуск) */
   load(): Promise<DB | null>
@@ -138,7 +138,7 @@ export class Store {
 
   /**
    * @param backend куда сохранять; строка — папка для JsonBackend (как было раньше)
-   * @param importFrom откуда перенести данные, если основное хранилище пустое (например, db.json → Supabase)
+   * @param importFrom откуда перенести данные, если основное хранилище пустое (например, db.json → Postgres)
    */
   constructor(backend: Backend | string, importFrom?: Backend) {
     this.backend = typeof backend === "string" ? new JsonBackend(backend) : backend

@@ -3,6 +3,11 @@
   "configurations": [
     {
       "name": "dobryi-dom-docker-dev",
+      "url": "http://localhost:5173",
+      "port": 5173
+    },
+    {
+      "name": "dobryi-dom-docker-dev-start",
       "runtimeExecutable": "powershell",
       "runtimeArgs": [
         "-NoProfile",
