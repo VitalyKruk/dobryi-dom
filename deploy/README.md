@@ -67,7 +67,7 @@ sudo docker compose logs caddy       # выпуск и продление сер
 
 ## Настройка сервера (уже сделана)
 
-- **firewalld**, зона `public`: только `ssh`, `http`, `https`, `443/udp` (HTTP/3).
+- **firewalld**, зона `public`: только `ssh`, `http`, `https`, `443/udp` (HTTP/3). Системный rpcbind слушает порт 111, но снаружи он закрыт файрволом.
 - **SSH**: вход по паролю выключен (`/etc/ssh/sshd_config.d/01-hardening.conf`).
 - **Обновления безопасности** ставятся сами: `dnf-automatic` (`upgrade_type = security`), таймер `dnf-automatic.timer`. Перезагрузки нет — после обновления ядра сервер нужно перезагрузить вручную (`sudo needs-restarting -r` подскажет).
 - **Docker** — из официального репозитория `download.docker.com`. Пользователь `rocky` не в группе `docker` (она равна root), команды — через `sudo`.
