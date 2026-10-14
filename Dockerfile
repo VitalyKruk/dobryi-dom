@@ -1,5 +1,5 @@
 # ——— Сборка фронтенда ———
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ RUN npm run build
 
 # ——— API (server/) ———
 # Node 24 запускает TypeScript напрямую, сборка не нужна. Данные — в томе /data.
-FROM node:24-alpine AS api
+FROM node:26-alpine AS api
 # Дата сборки сбрасывает кеш этого слоя: иначе Docker годами отдаёт apk upgrade из кеша
 # и исправления безопасности Alpine не доходят до образа (см. APK_UPGRADE_DATE в compose.yaml)
 ARG APK_UPGRADE_DATE=unset
