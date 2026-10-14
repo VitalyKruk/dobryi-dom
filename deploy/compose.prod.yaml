@@ -1,0 +1,49 @@
+# Прод на сервере: compose.yaml + этот файл. В .env на сервере COMPOSE_FILE=compose.yaml:deploy/compose.prod.yaml,
+# поэтому там хватает обычного `docker compose up -d`. Порядок выкладки — deploy/README.md.
+#
+# Снаружи открыт только Caddy (80/443): он получает сертификат Let's Encrypt и проксирует в nginx (web).
+# Порты web и db на хост не публикуются: Docker открывает опубликованные порты в обход файрвола.
+services:
+  web:
+    # Образы собираются заранее и загружаются на сервер; тег — коммит, из которого собраны
+    image: dobryi-dom:${IMAGE_TAG:?задайте IMAGE_TAG в .env}
+    build:
+      args:
+        VITE_DEMO_LOGIN: "0"
+    ports: !reset []
+
+  api:
+    image: dobryi-dom-api:${IMAGE_TAG:?задайте IMAGE_TAG в .env}
+    environment:
+      # Общий демо-пароль не принимается; пароли персоналу — server/set-password.ts
+      DEMO_LOGIN: "0"
+      # Перед API два прокси: Caddy и nginx (web). IP посетителя — адрес, который Caddy записал
+      # в X-Forwarded-For; лимиты частоты и журнал считают по нему (README, «Ограничения частоты»)
+      TRUST_PROXY: "2"
+
+  db:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.11.7-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?задайте DOMAIN в .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Сертификаты и ключи Let's Encrypt — без тома выпускались бы заново при каждом перезапуске
+      - caddy-data:/data
+      - caddy-config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

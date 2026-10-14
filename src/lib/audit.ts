@@ -12,6 +12,7 @@ export const AUDIT_LIMIT = 2000
 export const auditActionLabel: Record<AuditAction, string> = {
   "auth.login": "Вход",
   "auth.login_failed": "Неудачный вход",
+  "auth.login_locked": "Вход заблокирован",
   "auth.register": "Регистрация",
   "application.create": "Новая заявка",
   "application.status": "Статус заявки",

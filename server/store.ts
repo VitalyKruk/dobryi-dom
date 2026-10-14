@@ -205,7 +205,10 @@ export class Store {
     return this.write((db) => {
       // Сессии оставляем, чтобы сброс не разлогинил тех, кто работает с демо
       const sessions = db.sessions.filter((s) => fresh.users.some((u) => u.id === s.userId))
-      Object.assign(db, fresh, { sessions })
+      // Пароли — тоже: на проде у персонала свои (server/set-password.ts), сброс не возвращает демо-пароль
+      const passwords = { ...fresh.passwords }
+      for (const email of Object.keys(passwords)) passwords[email] = db.passwords[email] ?? passwords[email]
+      Object.assign(db, fresh, { sessions, passwords })
     })
   }
 

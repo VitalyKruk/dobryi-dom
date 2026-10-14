@@ -22,9 +22,9 @@ const PAGE_SIZE = 25
 const when = (iso: string) =>
   new Date(iso).toLocaleString("ru-RU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
 
-/** Неудачный вход и сброс данных — то, на что администратору стоит обратить внимание */
-const tone = (e: AuditEntry) =>
-  e.action === "auth.login_failed" || e.action === "data.reset" || e.action === "pet.delete" ? "warning" : "secondary"
+/** Неудачные и заблокированные входы, сброс данных — то, на что администратору стоит обратить внимание */
+const warnings: AuditEntry["action"][] = ["auth.login_failed", "auth.login_locked", "data.reset", "pet.delete"]
+const tone = (e: AuditEntry) => (warnings.includes(e.action) ? "warning" : "secondary")
 
 function Actor({ e }: { e: AuditEntry }) {
   if (!e.actor) return <span className="text-muted-foreground">Не определён</span>

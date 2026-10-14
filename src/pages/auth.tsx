@@ -145,6 +145,8 @@ export function LoginPage() {
   }
 
   const demoIcons = { user: UserRound, volunteer: LayoutDashboard, admin: ShieldCheck }
+  // На проде (сборка с VITE_DEMO_LOGIN=0) демо-входа нет: демо-пароль там не принимается
+  const demoLogin = import.meta.env.VITE_DEMO_LOGIN !== "0"
 
   return (
     <AuthCard
@@ -177,21 +179,32 @@ export function LoginPage() {
           {formState.isSubmitting && <Loader2 className="animate-spin" />} Войти
         </Button>
       </form>
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-        <Separator className="flex-1" /> или демо-вход как <Separator className="flex-1" />
-      </div>
-      <div className="flex flex-col gap-2">
-        {seedUsers.map((u) => {
-          const Icon = demoIcons[u.role]
-          return (
-            <Button key={u.id} variant="outline" size="lg" disabled={!!demoBusy} onClick={() => demo(u.email)} className="justify-start">
-              {demoBusy === u.email ? <Loader2 className="animate-spin" /> : <Icon />}
-              <span className="flex-1 text-left">{roleLabel[u.role]}</span>
-              <span className="text-xs font-normal text-muted-foreground">{u.name.split(" ")[0]}</span>
-            </Button>
-          )
-        })}
-      </div>
+      {demoLogin && (
+        <>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <Separator className="flex-1" /> или демо-вход как <Separator className="flex-1" />
+          </div>
+          <div className="flex flex-col gap-2">
+            {seedUsers.map((u) => {
+              const Icon = demoIcons[u.role]
+              return (
+                <Button
+                  key={u.id}
+                  variant="outline"
+                  size="lg"
+                  disabled={!!demoBusy}
+                  onClick={() => demo(u.email)}
+                  className="justify-start"
+                >
+                  {demoBusy === u.email ? <Loader2 className="animate-spin" /> : <Icon />}
+                  <span className="flex-1 text-left">{roleLabel[u.role]}</span>
+                  <span className="text-xs font-normal text-muted-foreground">{u.name.split(" ")[0]}</span>
+                </Button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </AuthCard>
   )
 }

@@ -3,8 +3,8 @@
  * createApp не слушает порт — так его удобно поднимать в тестах.
  */
 import { randomBytes } from "node:crypto"
-import express, { type Request } from "express"
-import { ADOPTED_BEFORE_SITE } from "../src/lib/seed.ts"
+import express, { type Request, type Response } from "express"
+import { ADOPTED_BEFORE_SITE, DEMO_PASSWORD } from "../src/lib/seed.ts"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "../src/lib/match.ts"
 import { featuredPets, filtersFromQuery, matchesFilters, similarPets, sortPets } from "../src/lib/pets-query.ts"
 import type { Application, AuditEntry, InvestorReport, Pet, Species, User } from "../src/lib/types.ts"
@@ -14,10 +14,26 @@ import { errorHandler, HttpError, parse } from "./errors.ts"
 import { log, requestLogger } from "./logger.ts"
 import { fakeDoorStats, recordFakeDoor } from "../src/lib/fake-door.ts"
 import { actorOf, filterAudit, maskEmail, petStatusChange, pushAudit, roleChange, statusChange } from "../src/lib/audit.ts"
+import { RateLimit, trustProxySetting } from "./rate-limit.ts"
 import * as s from "./schemas.ts"
 import { UPLOAD_NAME, uploadType, type DB, type Store } from "./store.ts"
 
 const now = () => new Date().toISOString()
+
+/** 429 с заголовком Retry-After: клиент и браузер видят, сколько ждать */
+function tooMany(res: Response, seconds: number, message: string) {
+  res.setHeader("Retry-After", String(seconds))
+  return new HttpError(429, message)
+}
+
+/** Лимит частоты по IP: лишний запрос — 429, первый лишний за окно пишется в лог вместе с адресом */
+function limitByIp(req: Request, res: Response, limit: RateLimit, message: string) {
+  const ip = req.ip ?? "unknown"
+  const count = limit.hit(ip)
+  if (count <= limit.limit) return
+  if (count === limit.limit + 1) log("warn", "rate_limited", { id: req.id, ip, path: req.path })
+  throw tooMany(res, limit.blockedFor(ip), message)
+}
 
 /** Внутренние заметки видит только персонал */
 function publicPet(pet: Pet, viewer?: User): Pet {
@@ -82,10 +98,19 @@ function detectImage(buf: Buffer): "jpg" | "png" | "webp" | null {
   return null
 }
 
-export function createApp(store: Store) {
+/**
+ * demoLogin: false (DEMO_LOGIN=0) — прод: общий демо-пароль не принимается ни при входе, ни при регистрации.
+ * Персоналу пароли задаёт server/set-password.ts.
+ * trustProxy (TRUST_PROXY) — каким прокси верить в X-Forwarded-For, чтобы req.ip был адресом посетителя
+ * (см. trustProxySetting). Лимиты частоты считаются по req.ip.
+ */
+export function createApp(
+  store: Store,
+  { demoLogin = process.env.DEMO_LOGIN !== "0", trustProxy = process.env.TRUST_PROXY }: { demoLogin?: boolean; trustProxy?: string } = {},
+) {
   const app = express()
   app.disable("x-powered-by")
-  app.set("trust proxy", "loopback")
+  app.set("trust proxy", trustProxySetting(trustProxy))
   // Первым — чтобы в лог попадали и запросы, упавшие на разборе JSON
   app.use(requestLogger())
   app.use(express.json({ limit: "200kb" }))
@@ -475,15 +500,43 @@ export function createApp(store: Store) {
     return token
   }
 
+  // Подбор пароля: не больше 5 неудачных входов на один email и 20 с одного IP за 15 минут.
+  // Неудачи считаются и для незарегистрированных email — иначе по 429 было бы видно, кто есть на сайте.
+  // Лимит по IP не сбрасывается успешным входом: иначе свой аккаунт обнулял бы счётчик между попытками.
+  const LOGIN_WINDOW_MS = 15 * 60_000
+  const loginFailsByEmail = new RateLimit(5, LOGIN_WINDOW_MS)
+  const loginFailsByIp = new RateLimit(20, LOGIN_WINDOW_MS)
+  const loginLocked = (res: Response, seconds: number) =>
+    tooMany(res, seconds, `Слишком много неудачных попыток входа. Попробуйте снова через ${Math.ceil(seconds / 60)} мин.`)
+
   app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = parse(s.loginSchema, req.body)
-    const user = db().users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    const ok = await verifyPassword(password, user && db().passwords[user.email])
+    const input = parse(s.loginSchema, req.body)
+    const email = input.email.toLowerCase()
+    const ip = req.ip ?? "unknown"
+    // Пока лимит исчерпан, пароль не проверяем вовсе, даже верный: иначе подбор продолжался бы по ответам
+    const wait = Math.max(loginFailsByIp.blockedFor(ip), loginFailsByEmail.blockedFor(email))
+    if (wait) throw loginLocked(res, wait)
+    // Попытку считаем до проверки пароля (она асинхронная): параллельные запросы не проскочат лимит.
+    // Успешный вход потом вычитается — в счётчиках остаются только неудачи.
+    const byIp = loginFailsByIp.hit(ip) === loginFailsByIp.limit
+    const byEmail = loginFailsByEmail.hit(email) === loginFailsByEmail.limit
+
+    const user = db().users.find((u) => u.email.toLowerCase() === email)
+    const ok = (await verifyPassword(input.password, user && db().passwords[user.email])) && (demoLogin || input.password !== DEMO_PASSWORD)
     if (!user || !ok) {
       // Серия неудачных входов в журнале — повод проверить, не подбирают ли пароль
-      await store.write((d) => audit(d, req, { actor: null, action: "auth.login_failed", details: maskEmail(email.toLowerCase()) }))
-      throw new HttpError(401, "Неверный email или пароль. Попробуйте ещё раз или войдите через демо-аккаунт.")
+      await store.write((d) => audit(d, req, { actor: null, action: "auth.login_failed", details: maskEmail(email) }))
+      if (byIp || byEmail) {
+        // Эта попытка исчерпала лимит — пишем один раз, дальше до конца окна только 429 в логе запросов
+        const details = `${byIp ? "по IP" : "по email"}: ${maskEmail(email)}, IP ${ip}`
+        await store.write((d) => audit(d, req, { actor: null, action: "auth.login_locked", details }))
+        log("warn", "login_locked", { id: req.id, ip, by: byIp ? "ip" : "email", email: maskEmail(email) })
+        throw loginLocked(res, Math.max(loginFailsByIp.blockedFor(ip), loginFailsByEmail.blockedFor(email)))
+      }
+      throw new HttpError(401, `Неверный email или пароль. Попробуйте ещё раз${demoLogin ? " или войдите через демо-аккаунт" : ""}.`)
     }
+    loginFailsByIp.undo(ip)
+    loginFailsByEmail.reset(email)
     const token = await startSession(user.id)
     await store.write((d) => audit(d, req, { actor: actorOf(user), action: "auth.login" }))
     res.json({ token, user })
@@ -491,6 +544,9 @@ export function createApp(store: Store) {
 
   app.post("/api/auth/register", async (req, res) => {
     const input = parse(s.registerSchema, req.body)
+    if (!demoLogin && input.password === DEMO_PASSWORD) {
+      throw new HttpError(400, "Проверьте введённые данные", { password: "Этот пароль слишком простой — придумайте другой" })
+    }
     const email = input.email.toLowerCase()
     const hash = await hashPassword(input.password)
     const user = await store.write((d) => {
@@ -639,15 +695,10 @@ export function createApp(store: Store) {
   // Переход по кнопке оплаты или соцсети считается здесь; администратор видит, на что есть спрос.
   // Ограничение частоты по IP — чтобы счётчик нельзя было накрутить скриптом.
 
-  const fakeDoorHits = new Map<string, { count: number; since: number }>()
+  const fakeDoorLimit = new RateLimit(30, 60_000)
   app.post("/api/fake-doors", async (req, res) => {
     const { feature } = parse(s.fakeDoorSchema, req.body)
-    const ip = req.ip ?? "unknown"
-    const nowMs = Date.now()
-    const hit = fakeDoorHits.get(ip)
-    if (!hit || nowMs - hit.since > 60_000) fakeDoorHits.set(ip, { count: 1, since: nowMs })
-    else if (++hit.count > 30) throw new HttpError(429, "Слишком много переходов, попробуйте позже")
-    if (fakeDoorHits.size > 10_000) fakeDoorHits.clear()
+    limitByIp(req, res, fakeDoorLimit, "Слишком много переходов, попробуйте позже")
     await store.write((d) => recordFakeDoor(d.fakeDoors, feature))
     log("info", "fake_door", { id: req.id, feature, role: req.user?.role ?? "guest" })
     res.status(204).end()
@@ -663,14 +714,9 @@ export function createApp(store: Store) {
   // Фронтенд присылает сюда необработанные ошибки — они попадают в серверный лог.
   // Ограничение частоты по IP: сломанная страница в цикле не должна заваливать лог.
 
-  const clientErrorHits = new Map<string, { count: number; since: number }>()
+  const clientErrorLimit = new RateLimit(20, 60_000)
   app.post("/api/client-errors", (req, res) => {
-    const ip = req.ip ?? "unknown"
-    const nowMs = Date.now()
-    const hit = clientErrorHits.get(ip)
-    if (!hit || nowMs - hit.since > 60_000) clientErrorHits.set(ip, { count: 1, since: nowMs })
-    else if (++hit.count > 20) throw new HttpError(429, "Слишком много сообщений об ошибках")
-    if (clientErrorHits.size > 10_000) clientErrorHits.clear()
+    limitByIp(req, res, clientErrorLimit, "Слишком много сообщений об ошибках")
     const e = parse(s.clientErrorSchema, req.body)
     log("warn", "client_error", {
       id: req.id,

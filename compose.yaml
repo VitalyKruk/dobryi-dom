@@ -26,6 +26,9 @@ services:
       # Данные и загруженные фото — в Postgres (сервис db). При первом запуске на пустой базе
       # туда переносится всё из тома api-data (db.json и фото), если там что-то есть.
       DATABASE_URL: postgres://dobryi:${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env — см. .env.example}@db:5432/dobryi_dom
+      # Сколько прокси перед API: здесь один — nginx (web). IP посетителя — последний адрес,
+      # который дописал nginx в X-Forwarded-For; всё левее мог прислать сам клиент. На проде — 2 (+ Caddy)
+      TRUST_PROXY: "1"
     depends_on:
       db:
         condition: service_healthy
