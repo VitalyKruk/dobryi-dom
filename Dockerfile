@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Кнопки демо-входа на /login; на проде — 0 (deploy/compose.prod.yaml)
+ARG VITE_DEMO_LOGIN=1
 RUN npm run build
 
 # ——— API (server/) ———

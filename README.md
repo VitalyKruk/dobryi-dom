@@ -144,6 +144,8 @@ docker compose --profile dev up dev
 
 nginx настроен под SPA: прямые ссылки вида `/pet/persik` и `/admin/pets` открываются без 404. Файлы из `/assets/` кешируются на год (в их именах есть хеш), `index.html` — без кеша. Проверка здоровья — `GET /healthz`.
 
+**Прод** (https://dobryi-dom-s-hvostikamy.ru) — тот же compose плюс [deploy/compose.prod.yaml](deploy/compose.prod.yaml): Caddy с HTTPS от Let's Encrypt перед nginx, порты web и db закрыты. Выкладка и настройка сервера — [deploy/README.md](deploy/README.md).
+
 ### Линтеры
 
 ```bash
@@ -260,6 +262,8 @@ Workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) запус
 | Администратор | svetlana@dobryi-dom.ru | То же — второй администратор, куратор пристройства                      |
 
 Данные хранятся на сервере (`db.json`). Вернуть исходное состояние — кнопка «Сбросить демо-данные» в сайдбаре админки. Если `db.json` создан до появления истории заявок, нажмите её, чтобы дашборд наполнился.
+
+**На проде демо-входа нет.** Кнопки на `/login` скрыты (сборка с `VITE_DEMO_LOGIN=0`), API не принимает `demo1234` ни при входе, ни при регистрации (`DEMO_LOGIN=0`). Персоналу пароли задаёт [server/set-password.ts](server/set-password.ts). «Сбросить демо-данные» возвращает данные, но не пароли. Подробнее — [deploy/README.md](deploy/README.md).
 
 ## Стек
 

@@ -12,7 +12,7 @@ process.env.LOG_LEVEL ??= "silent"
 import { JsonBackend, seedDb, Store, type Backend } from "./store.ts"
 import { PostgresBackend } from "./postgres.ts"
 import { testDatabaseUrl } from "./test-db.ts"
-import { verifyPassword } from "./auth.ts"
+import { hashPassword, verifyPassword } from "./auth.ts"
 
 let base = ""
 let dir = ""
@@ -393,6 +393,33 @@ describe("миграция базы", () => {
       assert.equal(store.db.users.filter((u) => u.email === "olga@dobryi-dom.ru").length, 1, "существующие не дублируются")
     } finally {
       await rm(old, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("прод без демо-входа (DEMO_LOGIN=0)", () => {
+  test("демо-пароль не принимается, свой пароль — да, сброс данных его не возвращает", async () => {
+    const prodDir = await mkdtemp(path.join(tmpdir(), "dobryi-dom-prod-"))
+    const store = await new Store(prodDir).init()
+    const server = createApp(store, { demoLogin: false }).listen(0, "127.0.0.1")
+    await new Promise((r) => server.once("listening", r))
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    const post = (route: string, body: unknown) =>
+      fetch(url + route, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+    try {
+      const demo = await post("/api/auth/login", { email: "olga@dobryi-dom.ru", password: "demo1234" })
+      assert.equal(demo.status, 401)
+      assert.doesNotMatch((await demo.json()).error, /демо/)
+      assert.equal((await post("/api/auth/register", { name: "Тест", email: "t@example.com", password: "demo1234" })).status, 400)
+
+      await store.write(async (d) => {
+        d.passwords["olga@dobryi-dom.ru"] = await hashPassword("своЙ-пароль-123")
+      })
+      await store.reset()
+      assert.equal((await post("/api/auth/login", { email: "olga@dobryi-dom.ru", password: "своЙ-пароль-123" })).status, 200)
+    } finally {
+      server.close()
+      await rm(prodDir, { recursive: true, force: true })
     }
   })
 })

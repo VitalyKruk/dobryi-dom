@@ -4,7 +4,7 @@
  */
 import { randomBytes } from "node:crypto"
 import express, { type Request } from "express"
-import { ADOPTED_BEFORE_SITE } from "../src/lib/seed.ts"
+import { ADOPTED_BEFORE_SITE, DEMO_PASSWORD } from "../src/lib/seed.ts"
 import { isEmptyProfile, matchPets, profileFromApplication, profileFromFavorites, type MatchProfile } from "../src/lib/match.ts"
 import { featuredPets, filtersFromQuery, matchesFilters, similarPets, sortPets } from "../src/lib/pets-query.ts"
 import type { Application, AuditEntry, InvestorReport, Pet, Species, User } from "../src/lib/types.ts"
@@ -82,7 +82,11 @@ function detectImage(buf: Buffer): "jpg" | "png" | "webp" | null {
   return null
 }
 
-export function createApp(store: Store) {
+/**
+ * demoLogin: false (DEMO_LOGIN=0) — прод: общий демо-пароль не принимается ни при входе, ни при регистрации.
+ * Персоналу пароли задаёт server/set-password.ts.
+ */
+export function createApp(store: Store, { demoLogin = process.env.DEMO_LOGIN !== "0" } = {}) {
   const app = express()
   app.disable("x-powered-by")
   app.set("trust proxy", "loopback")
@@ -478,11 +482,11 @@ export function createApp(store: Store) {
   app.post("/api/auth/login", async (req, res) => {
     const { email, password } = parse(s.loginSchema, req.body)
     const user = db().users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    const ok = await verifyPassword(password, user && db().passwords[user.email])
+    const ok = (await verifyPassword(password, user && db().passwords[user.email])) && (demoLogin || password !== DEMO_PASSWORD)
     if (!user || !ok) {
       // Серия неудачных входов в журнале — повод проверить, не подбирают ли пароль
       await store.write((d) => audit(d, req, { actor: null, action: "auth.login_failed", details: maskEmail(email.toLowerCase()) }))
-      throw new HttpError(401, "Неверный email или пароль. Попробуйте ещё раз или войдите через демо-аккаунт.")
+      throw new HttpError(401, `Неверный email или пароль. Попробуйте ещё раз${demoLogin ? " или войдите через демо-аккаунт" : ""}.`)
     }
     const token = await startSession(user.id)
     await store.write((d) => audit(d, req, { actor: actorOf(user), action: "auth.login" }))
@@ -491,6 +495,9 @@ export function createApp(store: Store) {
 
   app.post("/api/auth/register", async (req, res) => {
     const input = parse(s.registerSchema, req.body)
+    if (!demoLogin && input.password === DEMO_PASSWORD) {
+      throw new HttpError(400, "Проверьте введённые данные", { password: "Этот пароль слишком простой — придумайте другой" })
+    }
     const email = input.email.toLowerCase()
     const hash = await hashPassword(input.password)
     const user = await store.write((d) => {

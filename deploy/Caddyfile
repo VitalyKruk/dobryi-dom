@@ -1,0 +1,24 @@
+# Caddy на проде: HTTPS для сайта. Сертификат Let's Encrypt выпускается и продлевается сам,
+# HTTP перенаправляется на HTTPS, www — на основной домен. DOMAIN — из .env (deploy/compose.prod.yaml).
+{
+	# API управления Caddy не нужен; после правки этого файла — docker compose restart caddy
+	admin off
+}
+
+{$DOMAIN} {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy web:8080 {
+		# Версию nginx наружу не показываем
+		header_down -Server
+	}
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
