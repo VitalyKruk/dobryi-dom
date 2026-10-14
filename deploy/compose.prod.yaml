@@ -17,6 +17,9 @@ services:
     environment:
       # Общий демо-пароль не принимается; пароли персоналу — server/set-password.ts
       DEMO_LOGIN: "0"
+      # Перед API два прокси: Caddy и nginx (web). IP посетителя — адрес, который Caddy записал
+      # в X-Forwarded-For; лимиты частоты и журнал считают по нему (README, «Ограничения частоты»)
+      TRUST_PROXY: "2"
 
   db:
     ports: !reset []

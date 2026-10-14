@@ -8,6 +8,7 @@
 
 - **Снаружи открыты** только 22, 80 и 443 (firewalld). Порты web, api и db на хост не публикуются.
 - **Демо-вход выключен.** На `/login` нет кнопок демо-входа (`VITE_DEMO_LOGIN=0`), API не принимает демо-пароль (`DEMO_LOGIN=0`). Персоналу пароли задаёт [server/set-password.ts](../server/set-password.ts).
+- **Адрес посетителя.** API берёт его из `X-Forwarded-For` с учётом двух прокси перед собой — Caddy и nginx (`TRUST_PROXY: "2"` в [compose.prod.yaml](compose.prod.yaml)). Лимиты частоты и блокировка входа считаются по реальному IP; подставить свой адрес заголовком нельзя. Если перед Caddy появится ещё один прокси (CDN), число нужно увеличить — подробнее в [README](../README.md#ограничения-частоты-и-адрес-посетителя).
 - **Данные** лежат в томах Docker: `dobryi-dom_db-data` (Postgres), `dobryi-dom_caddy-data` (сертификаты).
 
 ## Что лежит на сервере
@@ -60,6 +61,7 @@ sudo docker compose start api
 ```bash
 sudo docker compose ps
 sudo docker compose logs -f api      # JSON-логи API
+sudo docker compose logs api | grep -E 'login_locked|rate_limited'   # блокировки входа и лимиты, с IP
 sudo docker compose logs caddy       # выпуск и продление сертификата
 ```
 

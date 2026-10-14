@@ -13,6 +13,7 @@ import { JsonBackend, seedDb, Store, type Backend } from "./store.ts"
 import { PostgresBackend } from "./postgres.ts"
 import { testDatabaseUrl } from "./test-db.ts"
 import { hashPassword, verifyPassword } from "./auth.ts"
+import { RateLimit, trustProxySetting } from "./rate-limit.ts"
 
 let base = ""
 let dir = ""
@@ -60,7 +61,7 @@ async function api(method: string, url: string, body?: unknown, token?: string, 
     body: body === undefined ? undefined : body instanceof Uint8Array ? new Blob([body as Uint8Array<ArrayBuffer>]) : JSON.stringify(body),
   })
   const text = await res.text()
-  return { status: res.status, json: text ? JSON.parse(text) : null, requestId: res.headers.get("x-request-id") }
+  return { status: res.status, json: text ? JSON.parse(text) : null, requestId: res.headers.get("x-request-id"), headers: res.headers }
 }
 
 const login = async (email: string) => (await api("POST", "/api/auth/login", { email, password: "demo1234" })).json.token as string
@@ -421,6 +422,101 @@ describe("прод без демо-входа (DEMO_LOGIN=0)", () => {
       server.close()
       await rm(prodDir, { recursive: true, force: true })
     }
+  })
+})
+
+describe("ограничения частоты и адрес клиента", () => {
+  // Тестовый сервер доверяет loopback (TRUST_PROXY не задан), поэтому разных посетителей изображаем X-Forwarded-For
+  const from = (ip: string) => ({ "x-forwarded-for": ip })
+  const tryLogin = (email: string, password: string, ip: string) => api("POST", "/api/auth/login", { email, password }, undefined, from(ip))
+
+  test("5 неудачных входов на email — 429 даже с верным паролем и с других адресов; успешный вход обнуляет счётчик", async () => {
+    assert.equal(
+      (await api("POST", "/api/auth/register", { name: "Подбор", email: "brute@example.com", password: "password1" })).status,
+      201,
+    )
+    for (let i = 1; i <= 4; i++) assert.equal((await tryLogin("brute@example.com", "wrong", `198.51.100.${i}`)).status, 401)
+    assert.equal((await tryLogin("Brute@Example.com", "password1", "198.51.100.9")).status, 200)
+
+    for (let i = 1; i <= 4; i++) assert.equal((await tryLogin("brute@example.com", "wrong", `198.51.100.${i}`)).status, 401)
+    const locked = await tryLogin("BRUTE@example.com", "wrong", "198.51.100.5")
+    assert.equal(locked.status, 429, "пятая неудача подряд")
+    assert.match(locked.json.error, /Слишком много неудачных попыток входа\. Попробуйте снова через 15 мин\./)
+    const retry = Number(locked.headers.get("retry-after"))
+    assert.ok(retry > 890 && retry <= 900, `Retry-After: ${retry}`)
+    assert.equal(
+      (await tryLogin("brute@example.com", "password1", "198.51.100.200")).status,
+      429,
+      "пароль во время блокировки не проверяется",
+    )
+    assert.equal((await tryLogin("anna@example.com", "wrong", "198.51.100.5")).status, 401, "другие email с этого адреса — как обычно")
+
+    const olga = await login("olga@dobryi-dom.ru")
+    const r = await api("GET", "/api/admin/audit?group=auth&q=" + encodeURIComponent("IP 198.51.100"), undefined, olga)
+    const entries = r.json.items.filter((e: { action: string }) => e.action === "auth.login_locked")
+    assert.equal(entries.length, 1, "блокировка пишется в журнал один раз")
+    assert.equal(entries[0].details, "по email: b***@example.com, IP 198.51.100.5")
+  })
+
+  test("20 неудачных входов с одного IP — 429 для любых email, незарегистрированные тоже считаются", async () => {
+    for (let i = 1; i < 20; i++) assert.equal((await tryLogin(`nobody${i}@example.com`, "wrong", "203.0.113.50")).status, 401)
+    assert.equal((await tryLogin("nobody20@example.com", "wrong", "203.0.113.50")).status, 429)
+    assert.equal((await tryLogin("anna@example.com", "demo1234", "203.0.113.50")).status, 429)
+    assert.equal((await tryLogin("anna@example.com", "demo1234", "203.0.113.51")).status, 200, "соседний адрес не задет")
+
+    const r = await api("GET", "/api/admin/audit?q=" + encodeURIComponent("IP 203.0.113.50"), undefined, await login("olga@dobryi-dom.ru"))
+    assert.deepEqual(
+      r.json.items.map((e: { action: string; details: string }) => [e.action, e.details]),
+      [["auth.login_locked", "по IP: n***@example.com, IP 203.0.113.50"]],
+    )
+  })
+
+  test("на проде (TRUST_PROXY=2: Caddy → nginx → API) лимит считается по посетителю, X-Forwarded-For от клиента не помогает", async () => {
+    const prodDir = await mkdtemp(path.join(tmpdir(), "dobryi-dom-proxy-"))
+    const store = await new Store(prodDir).init()
+    const server = createApp(store, { trustProxy: "2" }).listen(0, "127.0.0.1")
+    await new Promise((r) => server.once("listening", r))
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    // Так заголовок выглядит после nginx: адрес посетителя от Caddy, затем адрес самого Caddy
+    const report = (xff: string) =>
+      fetch(url + "/api/client-errors", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": xff },
+        body: JSON.stringify({ kind: "error", message: "x", page: "/" }),
+      })
+    try {
+      for (let i = 0; i < 20; i++) assert.equal((await report("203.0.113.7, 172.18.0.3")).status, 204)
+      const limited = await report("203.0.113.7, 172.18.0.3")
+      assert.equal(limited.status, 429)
+      assert.ok(Number(limited.headers.get("retry-after")) > 0)
+      // Подставной адрес левее настоящего ничего не меняет — даже если бы Caddy его пропустил
+      assert.equal((await report("10.9.9.9, 203.0.113.7, 172.18.0.3")).status, 429)
+      assert.equal((await report("203.0.113.8, 172.18.0.3")).status, 204, "другой посетитель за теми же прокси")
+    } finally {
+      server.close()
+      await rm(prodDir, { recursive: true, force: true })
+    }
+  })
+
+  test("TRUST_PROXY: число прокси или подсети; true и мусор не принимаются", () => {
+    assert.equal(trustProxySetting(undefined), "loopback")
+    assert.equal(trustProxySetting(" 2 "), 2)
+    assert.equal(trustProxySetting("loopback, 172.16.0.0/12"), "loopback, 172.16.0.0/12")
+    assert.throws(() => trustProxySetting("true"), /TRUST_PROXY/)
+    assert.throws(() => createApp({} as Store, { trustProxy: "не-адрес" }))
+  })
+
+  test("окно лимита: после него счётчик начинается заново", () => {
+    const limit = new RateLimit(2, 60_000)
+    assert.equal(limit.hit("a", 0), 1)
+    assert.equal(limit.hit("a", 1000), 2)
+    assert.equal(limit.blockedFor("a", 1000), 59)
+    assert.equal(limit.blockedFor("b", 1000), 0, "у каждого ключа свой счётчик")
+    limit.undo("a", 1000)
+    assert.equal(limit.blockedFor("a", 1000), 0)
+    limit.hit("a", 2000)
+    assert.equal(limit.blockedFor("a", 60_000), 0, "окно кончилось")
+    assert.equal(limit.hit("a", 60_000), 1)
   })
 })
 

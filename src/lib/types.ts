@@ -174,6 +174,7 @@ export type InvestorReport = {
 export type AuditAction =
   | "auth.login"
   | "auth.login_failed"
+  | "auth.login_locked"
   | "auth.register"
   | "application.create"
   | "application.status"
