@@ -173,7 +173,7 @@ docker compose --profile dev up dev
 
 nginx настроен под SPA: прямые ссылки вида `/pet/persik` и `/admin/pets` открываются без 404. Файлы из `/assets/` кешируются на год (в их именах есть хеш), `index.html` — без кеша. Проверка здоровья — `GET /healthz`.
 
-**Прод** (https://dobryi-dom-s-hvostikamy.ru) — тот же compose плюс [deploy/compose.prod.yaml](deploy/compose.prod.yaml): Caddy с HTTPS от Let's Encrypt перед nginx, порты web и db закрыты. Выкладка и настройка сервера — [deploy/README.md](deploy/README.md).
+**Прод** (https://dobryi-dom-s-hvostikamy.ru) — тот же compose плюс [deploy/compose.prod.yaml](deploy/compose.prod.yaml): Caddy с HTTPS от Let's Encrypt перед nginx, порты web и db закрыты. Регламент сборки и выкатки — проверки до и после, откат, особые случаи и известные ловушки — [deploy/README.md](deploy/README.md).
 
 ### Линтеры
 
