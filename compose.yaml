@@ -35,7 +35,7 @@ services:
 
   # Postgres: данные и фото. Порт открыт только на этом компьютере (127.0.0.1) — для тестов и psql
   db:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     environment:
       POSTGRES_DB: dobryi_dom
       POSTGRES_USER: dobryi

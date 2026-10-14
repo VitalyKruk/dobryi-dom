@@ -61,7 +61,7 @@ REST API на Node 24 + Express 5 в [server/](server/). TypeScript запуск
 
 ### Postgres
 
-Прод-стек хранит данные и загруженные фото в Postgres — сервис `db` в [compose.yaml](compose.yaml) (образ `postgres:17-alpine`, том `db-data`). Перед первым запуском скопируйте `.env.example` в `.env` и задайте `POSTGRES_PASSWORD`.
+Прод-стек хранит данные и загруженные фото в Postgres — сервис `db` в [compose.yaml](compose.yaml) (образ `postgres:17.11-alpine`, том `db-data`). Перед первым запуском скопируйте `.env.example` в `.env` и задайте `POSTGRES_PASSWORD`.
 
 ```bash
 docker compose up -d --build web api
@@ -109,7 +109,7 @@ docker compose logs -f api
 - Токены и пароли в командах заменяются на `***`.
 - Папка `logs/` не попадает в git.
 
-Промпты пишет отдельный хук — в [PROMPTS.txt](PROMPTS.txt).
+Промпты пишет отдельный хук ([scripts/log-prompt.mjs](scripts/log-prompt.mjs)) — в [PROMPTS.txt](PROMPTS.txt). Файл лежит в git, поэтому секреты (токены, ключи, пароли, пароли в адресах подключения) в нём заменяются на `***`, а служебные сообщения приложения (`<task-notification>` и подобные) не записываются. Маскировку делает общий [scripts/redact.mjs](scripts/redact.mjs) — тот же, что у журнала действий.
 
 ### Версия без сервера
 
@@ -195,6 +195,8 @@ Workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) запус
 1. **Линтеры, сборка и тесты** — `npm ci`, `npm run lint` (все пять линтеров), `npm run build` (с проверкой типов), `npm run test:api` и `npm run test:postgres`.
 2. **Образы Docker** — сборка сайта и API и smoke-тест всего стека через compose: прямые ссылки SPA, кеш ассетов, API через nginx (валидация, права, сохранение заявки в Postgres).
 3. **Публикация** (кроме PR) — в GitHub Container Registry: `ghcr.io/vitalykruk/dobryi-dom` (сайт) и `ghcr.io/vitalykruk/dobryi-dom-api` (API) с тегами `latest` (main), `sha-…`, имя ветки, версии из тега `v1.2.3`.
+
+Действия GitHub Actions закреплены по хешу коммита, образ Postgres — по точной версии: подменённый тег не попадёт в сборку. Обновления раз в неделю предлагает Dependabot ([.github/dependabot.yml](.github/dependabot.yml)) pull request'ами.
 
 ## Сценарий и состояния
 

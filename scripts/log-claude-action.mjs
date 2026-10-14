@@ -16,6 +16,7 @@
  */
 import { appendFileSync, existsSync, mkdirSync, renameSync, statSync } from "node:fs"
 import path from "node:path"
+import { redact } from "./redact.mjs"
 
 const ROOT = path.resolve(import.meta.dirname, "..")
 const DIR = path.join(ROOT, "logs")
@@ -25,14 +26,6 @@ const MAX_BYTES = 5 * 1024 * 1024
 const pad = (n) => String(n).padStart(2, "0")
 const stamp = (d) =>
   `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`
-
-/** Токены, пароли и ключи в командах — на *** */
-function redact(s) {
-  return s
-    .replace(/\b(Bearer|token|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi, "$1 ***")
-    .replace(/\b(gh[pousr]_|github_pat_|sk-|xox[abp]-)[A-Za-z0-9_-]{8,}/g, "$1***")
-    .replace(/((?:password|passwd|secret|api[_-]?key|token)\s*[=:]\s*)("[^"]*"|'[^']*'|\S+)/gi, "$1***")
-}
 
 /** Путь файла — относительно проекта, если он внутри */
 function rel(p) {
