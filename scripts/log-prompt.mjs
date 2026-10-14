@@ -4,11 +4,17 @@
  * каждый отправленный промпт в PROMPTS.txt в корне проекта — тем же форматом, что уже в файле:
  * номер по порядку, дата и время (UTC), текст как есть. Счётчик «Всего: …» в шапке обновляется.
  *
+ * Файл лежит в git, поэтому:
+ *   — секреты (токены, ключи, пароли, пароли в адресах подключения) заменяются на *** (scripts/redact.mjs);
+ *   — служебные сообщения приложения (<task-notification>…</task-notification> и подобные) не пишутся:
+ *     это не промпты пользователя, и в них бывают локальные пути.
+ *
  * Хук никогда не мешает работе: любая ошибка — выход с кодом 0 без записи.
  * Проверить вручную:  echo {"prompt":"тест"} | node scripts/log-prompt.mjs
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
+import { redact } from "./redact.mjs"
 
 const FILE = path.join(path.resolve(import.meta.dirname, ".."), "PROMPTS.txt")
 const RULE = "-".repeat(72)
@@ -41,6 +47,8 @@ try {
   const data = JSON.parse(input || "{}")
   const prompt = String(data.prompt ?? "").trim()
   if (!prompt) process.exit(0)
+  // Служебное сообщение приложения — весь текст в одном теге вида <task-notification>…</task-notification>
+  if (/^<([a-z][\w-]*)>[\s\S]*<\/\1>$/.test(prompt)) process.exit(0)
   // at — только для ручной дозаписи старых промптов; хук его не передаёт, берём текущее время
   const when = data.at && !Number.isNaN(Date.parse(data.at)) ? new Date(data.at) : new Date()
 
@@ -49,7 +57,7 @@ try {
   const headings = [...text.matchAll(/^(\d+)\. (Ответ на вопрос — )?\d{4}-\d{2}-\d{2} /gm)]
   const next = headings.reduce((max, m) => Math.max(max, Number(m[1])), 0) + 1
 
-  text = `${text.trimEnd()}\n\n${RULE}\n${next}. ${stamp(when)}\n${RULE}\n\n${prompt.replace(/[ \t]+$/gm, "")}\n`
+  text = `${text.trimEnd()}\n\n${RULE}\n${next}. ${stamp(when)}\n${RULE}\n\n${redact(prompt).replace(/[ \t]+$/gm, "")}\n`
 
   const answers = headings.filter((m) => m[2]).length
   const prompts = headings.length - answers + 1
