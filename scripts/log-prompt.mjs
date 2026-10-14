@@ -8,8 +8,9 @@
  *
  * Файл лежит в git, поэтому:
  *   — секреты (токены, ключи, пароли, пароли в адресах подключения) заменяются на *** (scripts/redact.mjs);
- *   — служебные сообщения приложения (<task-notification>…</task-notification> и подобные) не пишутся:
- *     это не промпты пользователя, и в них бывают локальные пути.
+ *   — служебные вставки приложения (<system-reminder>…</system-reminder>, <task-notification> и подобные
+ *     теги с дефисом в имени) и строка с папкой заметок соседних сессий вырезаются: это не текст
+ *     пользователя, и в них бывают локальные пути. Промпт, в котором кроме них ничего нет, не пишется.
  *
  * Хук никогда не мешает работе: любая ошибка — выход с кодом 0 без записи.
  * Проверить вручную:  echo {"prompt":"тест"} | node scripts/log-prompt.mjs
@@ -62,7 +63,11 @@ try {
     ? questionAnswers(data)
         .map(([q, a]) => `"${String(q).trim()}"\n→ "${String(a).trim()}"`)
         .join("\n\n")
-    : String(data.prompt ?? "").trim()
+    : String(data.prompt ?? "")
+        .replace(/<([a-z]+(?:-[a-z]+)+)>[\s\S]*?<\/\1>/g, "")
+        .replace(/^Shared notes folder for this group of sessions.*$/gm, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
   if (!prompt) process.exit(0)
   // Служебное сообщение приложения — весь текст в одном теге вида <task-notification>…</task-notification>
   if (/^<([a-z][\w-]*)>[\s\S]*<\/\1>$/.test(prompt)) process.exit(0)
