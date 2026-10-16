@@ -197,7 +197,7 @@ $C -o /dev/null -w "www: %{http_code} %{redirect_url}\n" https://www.$D/
 $C -o /dev/null -w "spa: %{http_code}\n" https://$D/pet/persik
 $C https://$D/api/health; echo
 $C -X POST -H 'content-type: application/json' -d '{"email":"anna@example.com","password":"demo1234"}' -w " [%{http_code}]\n" https://$D/api/auth/login
-$C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|server)"
+$C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|content-security|server)"
 ```
 
 | Проверка                          | Ожидаемо                                                                                                                                                                                           |
@@ -208,7 +208,7 @@ $C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|server)"
 | `spa` (прямая ссылка на карточку) | `200`                                                                                                                                                                                              |
 | health                            | `{"ok":true,"pets":…}`                                                                                                                                                                             |
 | демо-вход                         | `{"error":"Неверный email или пароль. Попробуйте ещё раз."} [401]` — без слова «демо». Проверяем на anna, а не на админе: каждая попытка идёт в счётчик блокировки (5 неудач на email за 15 минут) |
-| заголовки                         | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`; заголовка `Server` нет                                                                                                   |
+| заголовки                         | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` (начинается с `default-src 'self'`); заголовка `Server` нет                                    |
 
 **В браузере:** главная и карточка питомца открываются, на `/login` нет кнопок демо-входа, в консоли нет ошибок. Затем вход персоналом и то, что менялось в этом релизе.
 
