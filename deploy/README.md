@@ -180,12 +180,12 @@ Compose пересоздаёт `web` и `api`, база и Caddy остаютс�
 ssh $SERVER 'cd /opt/dobryi-dom && sudo docker compose ps --format "{{.Service}} {{.Image}} {{.State}} {{.Health}}"; sudo docker compose logs --since 5m api | grep -oE "\"msg\":\"(started|uncaught_exception)\".{0,160}"; echo "ошибок Caddy: $(sudo docker compose logs --since 5m caddy | grep -c "\"level\":\"error\"")"; sudo docker ps --format "{{.Names}}: {{.Ports}}"'
 ```
 
-| Что смотреть | Ожидаемо                                                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `ps`         | `api`, `web`, `db` — `running healthy` с новым тегом; `caddy` — `running` (без healthcheck)                                        |
-| лог API      | `"msg":"started"` с `"storage":"postgres"` и `"source":"existing"`. `seed` означает, что база оказалась пустой — стоп, разбираться |
-| ошибки Caddy | `0`                                                                                                                                |
-| порты        | `0.0.0.0:…` только у `dobryi-dom-caddy-1` (80, 443). У остальных — только внутренние                                               |
+| Что смотреть | Ожидаемо                                                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ps`         | `api`, `web`, `db` — `running healthy` с новым тегом; `caddy` — `running` (без healthcheck)                                                     |
+| лог API      | `"msg":"started"` с `"storage":"postgres"` и `"source":"existing"`. `seed` означает, что база оказалась пустой — стоп, разбираться              |
+| ошибки Caddy | `0`. Допустимы единичные `502` с `connection refused` в секунды переключения — кто-то зашёл, пока `web` пересоздавался. Остальные — разбираться |
+| порты        | `0.0.0.0:…` только у `dobryi-dom-caddy-1` (80, 443). У остальных — только внутренние                                                            |
 
 **Снаружи** (на Windows у curl нужен `--ssl-no-revoke`, см. [ловушки](#известные-ловушки)):
 
