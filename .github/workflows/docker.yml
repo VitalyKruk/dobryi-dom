@@ -129,6 +129,10 @@ jobs:
           for path in / /pet/persik; do
             curl -fsI "$B$path" | grep -qi "content-security-policy: default-src 'self'; script-src 'self';" || { echo "FAIL CSP $path"; exit 1; }
           done
+          # Permissions-Policy: ненужные сайту возможности браузера выключены
+          curl -fsI $B/ | grep -qi 'permissions-policy: camera=()'
+          # Редирект /api → /api/ относительный: без внутреннего порта и схемы http
+          curl -sI $B/api | grep -qi '^location: /api/' || { echo "FAIL /api redirect"; exit 1; }
           # robots.txt — настоящий файл, а не SPA-страница
           curl -fsI $B/robots.txt | grep -qi 'content-type: text/plain'
           # API через nginx: данные, валидация, права, сохранение

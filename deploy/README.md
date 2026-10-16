@@ -198,20 +198,22 @@ $C -o /dev/null -w "spa: %{http_code}\n" https://$D/pet/persik
 $C -o /dev/null -w "robots: %{http_code} %{content_type}\n" https://$D/robots.txt
 $C https://$D/api/health; echo
 $C -X POST -H 'content-type: application/json' -d '{"email":"anna@example.com","password":"demo1234"}' -w " [%{http_code}]\n" https://$D/api/auth/login
-$C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|content-security|server|via)"
+$C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|content-security|permissions-policy|server|via)"
+$C -o /dev/null -w "api-redirect: %{http_code} %{redirect_url}\n" https://$D/api
 $C -I http://$D/ | grep -iE "^(server|via)"   # редирект тоже без Server — пустой вывод
 ```
 
-| Проверка                          | Ожидаемо                                                                                                                                                                                                      |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home` (главная)                  | `200`                                                                                                                                                                                                         |
-| `http`                            | `308 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                                     |
-| `www`                             | `301 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                                     |
-| `spa` (прямая ссылка на карточку) | `200`                                                                                                                                                                                                         |
-| `robots`                          | `200 text/plain` (если `text/html` — отдалась SPA-страница, файла нет в образе)                                                                                                                               |
-| health                            | `{"ok":true,"pets":…}`                                                                                                                                                                                        |
-| демо-вход                         | `{"error":"Неверный email или пароль. Попробуйте ещё раз."} [401]` — без слова «демо». Проверяем на anna, а не на админе: каждая попытка идёт в счётчик блокировки (5 неудач на email за 15 минут)            |
-| заголовки                         | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` (начинается с `default-src 'self'`); заголовков `Server` и `Via` нет — ни в ответе, ни в редиректе с HTTP |
+| Проверка                          | Ожидаемо                                                                                                                                                                                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home` (главная)                  | `200`                                                                                                                                                                                                                                                          |
+| `http`                            | `308 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                                                                                      |
+| `www`                             | `301 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                                                                                      |
+| `spa` (прямая ссылка на карточку) | `200`                                                                                                                                                                                                                                                          |
+| `robots`                          | `200 text/plain` (если `text/html` — отдалась SPA-страница, файла нет в образе)                                                                                                                                                                                |
+| health                            | `{"ok":true,"pets":…}`                                                                                                                                                                                                                                         |
+| демо-вход                         | `{"error":"Неверный email или пароль. Попробуйте ещё раз."} [401]` — без слова «демо». Проверяем на anna, а не на админе: каждая попытка идёт в счётчик блокировки (5 неудач на email за 15 минут)                                                             |
+| заголовки                         | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` (начинается с `default-src 'self'`), `Permissions-Policy` (начинается с `camera=()`); заголовков `Server` и `Via` нет — ни в ответе, ни в редиректе с HTTP |
+| `api-redirect`                    | `301 https://dobryi-dom-s-hvostikamy.ru/api/` — тот же домен по HTTPS, без порта 8080                                                                                                                                                                          |
 
 **В браузере:** главная и карточка питомца открываются, на `/login` нет кнопок демо-входа, в консоли нет ошибок. Затем вход персоналом и то, что менялось в этом релизе.
 
