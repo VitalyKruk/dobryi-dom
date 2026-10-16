@@ -129,6 +129,8 @@ jobs:
           for path in / /pet/persik; do
             curl -fsI "$B$path" | grep -qi "content-security-policy: default-src 'self'; script-src 'self';" || { echo "FAIL CSP $path"; exit 1; }
           done
+          # robots.txt — настоящий файл, а не SPA-страница
+          curl -fsI $B/robots.txt | grep -qi 'content-type: text/plain'
           # API через nginx: данные, валидация, права, сохранение
           curl -fs "$B/api/pets?species=cat" | grep -q '"total"'
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/applications -H 'content-type: application/json' -d '{}')" = 400

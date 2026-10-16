@@ -5,20 +5,42 @@
 	admin off
 }
 
-{$DOMAIN} {
+# Caddy и nginx не называют себя в ответах: ни Server, ни Via
+(anonymous) {
 	header {
+		-Server
+		-Via
+	}
+}
+
+# HTTP → HTTPS. Свой блок вместо автоматического редиректа Caddy: в том нельзя убрать Server.
+# Проверки Let's Encrypt (/.well-known/acme-challenge/) Caddy обрабатывает раньше этих правил.
+http://{$DOMAIN}, http://www.{$DOMAIN} {
+	import anonymous
+	redir https://{host}{uri} 308
+}
+
+{$DOMAIN} {
+	import anonymous
+	header {
+		# includeSubDomains и preload не включены: см. deploy/README.md, «HSTS и поддомены»
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		-Server
 	}
 	reverse_proxy web:8080 {
 		# Версию nginx наружу не показываем
 		header_down -Server
 	}
+	# Ошибки самого Caddy (502, если nginx недоступен) — тоже без Server
+	handle_errors {
+		import anonymous
+		respond "{err.status_code} {err.status_text}"
+	}
 }
 
 www.{$DOMAIN} {
+	import anonymous
 	redir https://{$DOMAIN}{uri} permanent
 }
