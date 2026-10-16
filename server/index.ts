@@ -20,6 +20,7 @@ const server = createApp(store).listen(PORT, HOST, () => {
     storage: postgres ? "postgres" : "json",
     data: store.location,
     source: store.source,
+    ...(store.localizedPhotos > 0 && { localizedPhotos: store.localizedPhotos }),
     pid: process.pid,
   })
 })
