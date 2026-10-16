@@ -125,6 +125,10 @@ jobs:
           # Хешированные ассеты кешируются надолго
           asset=$(curl -fs $B/ | grep -o '/assets/[^"]*.js' | head -1)
           curl -fsI "$B$asset" | grep -qi 'cache-control: public, immutable'
+          # Content-Security-Policy на страницах (nginx.conf): скрипты — только с нашего домена
+          for path in / /pet/persik; do
+            curl -fsI "$B$path" | grep -qi "content-security-policy: default-src 'self'; script-src 'self';" || { echo "FAIL CSP $path"; exit 1; }
+          done
           # API через nginx: данные, валидация, права, сохранение
           curl -fs "$B/api/pets?species=cat" | grep -q '"total"'
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST $B/api/applications -H 'content-type: application/json' -d '{}')" = 400
