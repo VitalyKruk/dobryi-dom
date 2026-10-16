@@ -70,7 +70,7 @@ function SideNav({ pending }: { pending: number | null }) {
           <p className="font-bold">{user?.name}</p>
           <p className="text-secondary-foreground">{user && roleLabel[user.role]}</p>
           {user?.role === "volunteer" && (
-            <p className="mt-2 text-xs text-foreground/80">Волонтёр видит питомцев и заявки и меняет статусы питомцев.</p>
+            <p className="mt-2 text-xs text-foreground/80">Волонтёр видит питомцев и заявки и комментирует заявки.</p>
           )}
         </div>
         <Button asChild variant="ghost" className="justify-start text-secondary-foreground">

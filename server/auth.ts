@@ -36,14 +36,33 @@ export const newToken = () => randomBytes(32).toString("base64url")
 /** В хранилище лежит только хеш токена: утёкший db.json не даёт войти под чужой сессией */
 export const hashToken = (t: string) => createHash("sha256").update(t).digest("hex")
 
-/** Матрица доступа — та же, что в src/context/auth.tsx (PROMPT.md, раздел 5) */
+/**
+ * Матрица доступа — та же, что в src/context/auth.tsx и src/lib/api-static.ts (PROMPT.md, раздел 5).
+ * Волонтёр видит питомцев и их внутренние заметки (pets.notes), но статус питомца меняет только админ.
+ */
 export type Permission =
-  "admin.access" | "pets.status" | "pets.edit" | "applications.view" | "applications.status" | "volunteers.manage" | "users.manage"
+  | "admin.access"
+  | "pets.notes"
+  | "pets.status"
+  | "pets.edit"
+  | "applications.view"
+  | "applications.status"
+  | "volunteers.manage"
+  | "users.manage"
 
 const permissions: Record<Role, Permission[]> = {
   user: [],
-  volunteer: ["admin.access", "pets.status", "applications.view"],
-  admin: ["admin.access", "pets.status", "pets.edit", "applications.view", "applications.status", "volunteers.manage", "users.manage"],
+  volunteer: ["admin.access", "pets.notes", "applications.view"],
+  admin: [
+    "admin.access",
+    "pets.notes",
+    "pets.status",
+    "pets.edit",
+    "applications.view",
+    "applications.status",
+    "volunteers.manage",
+    "users.manage",
+  ],
 }
 
 export const can = (user: User | undefined, p: Permission) => !!user && permissions[user.role].includes(p)

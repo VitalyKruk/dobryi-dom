@@ -97,6 +97,16 @@ describe("питомцы", () => {
     assert.ok(staff.json.internalNotes)
   })
 
+  test("статус питомца меняет только админ, волонтёр — нет", async () => {
+    const before = (await api("GET", "/api/pets/graf")).json.status
+    const volunteer = await api("PATCH", "/api/pets/graf/status", { status: "reserved" }, await login("ivan@dobryi-dom.ru"))
+    assert.equal(volunteer.status, 403)
+    assert.equal((await api("GET", "/api/pets/graf")).json.status, before)
+    const admin = await api("PATCH", "/api/pets/graf/status", { status: "reserved" }, await login("olga@dobryi-dom.ru"))
+    assert.equal(admin.status, 200)
+    assert.equal((await api("PATCH", "/api/pets/graf/status", { status: before }, await login("olga@dobryi-dom.ru"))).status, 200)
+  })
+
   test("несуществующий питомец — 404", async () => {
     assert.equal((await api("GET", "/api/pets/no-such-pet")).status, 404)
   })
