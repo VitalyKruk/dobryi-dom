@@ -1,0 +1,5 @@
+# Добрый дом: поисковикам открыт сайт, кроме кабинетов сотрудников и пользователей и API
+User-agent: *
+Disallow: /admin
+Disallow: /account
+Disallow: /api/

@@ -195,20 +195,23 @@ $C -o /dev/null -w "home: %{http_code}\n" https://$D/
 $C -o /dev/null -w "http: %{http_code} %{redirect_url}\n" http://$D/
 $C -o /dev/null -w "www: %{http_code} %{redirect_url}\n" https://www.$D/
 $C -o /dev/null -w "spa: %{http_code}\n" https://$D/pet/persik
+$C -o /dev/null -w "robots: %{http_code} %{content_type}\n" https://$D/robots.txt
 $C https://$D/api/health; echo
 $C -X POST -H 'content-type: application/json' -d '{"email":"anna@example.com","password":"demo1234"}' -w " [%{http_code}]\n" https://$D/api/auth/login
-$C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|content-security|server)"
+$C -I https://$D/ | grep -iE "^(strict-transport|x-content-type|x-frame|content-security|server|via)"
+$C -I http://$D/ | grep -iE "^(server|via)"   # редирект тоже без Server — пустой вывод
 ```
 
-| Проверка                          | Ожидаемо                                                                                                                                                                                           |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home` (главная)                  | `200`                                                                                                                                                                                              |
-| `http`                            | `308 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                          |
-| `www`                             | `301 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                          |
-| `spa` (прямая ссылка на карточку) | `200`                                                                                                                                                                                              |
-| health                            | `{"ok":true,"pets":…}`                                                                                                                                                                             |
-| демо-вход                         | `{"error":"Неверный email или пароль. Попробуйте ещё раз."} [401]` — без слова «демо». Проверяем на anna, а не на админе: каждая попытка идёт в счётчик блокировки (5 неудач на email за 15 минут) |
-| заголовки                         | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` (начинается с `default-src 'self'`); заголовка `Server` нет                                    |
+| Проверка                          | Ожидаемо                                                                                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home` (главная)                  | `200`                                                                                                                                                                                                         |
+| `http`                            | `308 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                                     |
+| `www`                             | `301 https://dobryi-dom-s-hvostikamy.ru/`                                                                                                                                                                     |
+| `spa` (прямая ссылка на карточку) | `200`                                                                                                                                                                                                         |
+| `robots`                          | `200 text/plain` (если `text/html` — отдалась SPA-страница, файла нет в образе)                                                                                                                               |
+| health                            | `{"ok":true,"pets":…}`                                                                                                                                                                                        |
+| демо-вход                         | `{"error":"Неверный email или пароль. Попробуйте ещё раз."} [401]` — без слова «демо». Проверяем на anna, а не на админе: каждая попытка идёт в счётчик блокировки (5 неудач на email за 15 минут)            |
+| заголовки                         | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` (начинается с `default-src 'self'`); заголовков `Server` и `Via` нет — ни в ответе, ни в редиректе с HTTP |
 
 **В браузере:** главная и карточка питомца открываются, на `/login` нет кнопок демо-входа, в консоли нет ошибок. Затем вход персоналом и то, что менялось в этом релизе.
 
@@ -297,6 +300,15 @@ Caddy продлевает его сам за месяц до истечения
 ```bash
 echo | openssl s_client -connect dobryi-dom-s-hvostikamy.ru:443 -servername dobryi-dom-s-hvostikamy.ru 2>/dev/null | openssl x509 -noout -dates
 ```
+
+HTTP → HTTPS перенаправляет свой блок в [Caddyfile](Caddyfile), а не автоматический редирект Caddy (в том нельзя убрать `Server`). Проверки Let's Encrypt по HTTP Caddy обрабатывает раньше этого блока, а при продлении может пройти и проверку по порту 443. Если продление вдруг не прошло — в `sudo docker compose logs caddy` будет `challenge failed`; первое, что стоит попробовать, — убрать блок `http://…` и перезапустить Caddy.
+
+### HSTS и поддомены
+
+Сейчас `Strict-Transport-Security: max-age=31536000` — без `includeSubDomains` и `preload`. Из поддоменов есть только `www`, и он и так перенаправляет на HTTPS.
+
+- **Появился поддомен** (`api.`, `admin.`, `mail.`…) — сначала убедитесь, что он работает по HTTPS, затем добавьте в Caddyfile `includeSubDomains` и выкатите конфиг (раздел 6). Без HTTPS на поддомене браузеры, видевшие заголовок, перестанут его открывать на год.
+- **`preload`** — только осознанным решением владельца: домен попадает в список, зашитый в браузеры, и выйти из него можно лишь через месяцы. Нужны `includeSubDomains`, `max-age` не меньше года и заявка на hstspreload.org.
 
 ### Логи
 
