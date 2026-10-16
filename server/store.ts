@@ -58,6 +58,32 @@ export async function seedDb(): Promise<DB> {
   })
 }
 
+/** Снимок Unsplash в старых стартовых данных: id снимка и приближение кадра (fp-z) */
+const UNSPLASH_PHOTO = /^https:\/\/images\.unsplash\.com\/photo-([0-9a-f]+-[0-9a-f]+)\?(?:.*&)?fp-z=([\d.]+)/
+
+/**
+ * Ссылки на Unsplash (в России заблокирован) → копии из public/photos, которые раздаёт сам сайт.
+ * У питомца два кадра одного снимка: крупный план — тот, у которого приближение больше.
+ * Меняем только снимки, копии которых есть (это фото из seedPets); возвращаем, сколько заменили.
+ */
+function localizePhotos(pets: Pet[]) {
+  const known = new Set(seedPets.flatMap((p) => p.photos))
+  let changed = 0
+  for (const pet of pets) {
+    const parsed = pet.photos.map((url) => UNSPLASH_PHOTO.exec(url))
+    pet.photos = pet.photos.map((url, i) => {
+      const m = parsed[i]
+      if (!m) return url
+      const zoom = parsed.some((o) => o?.[1] === m[1] && Number(o[2]) < Number(m[2]))
+      const local = `/photos/${m[1]}${zoom ? "-zoom" : ""}.jpg`
+      if (!known.has(local)) return url
+      changed++
+      return local
+    })
+  }
+  return changed
+}
+
 /** Куда сохраняются данные и фото */
 export interface Backend {
   /** для лога при запуске: путь к файлу или адрес базы */
@@ -175,6 +201,8 @@ export class Store {
       data.users.push(structuredClone(u))
       data.passwords[u.email] = await hashPassword(DEMO_PASSWORD)
     }
+    // База, созданная, когда фото грузились с Unsplash, — переводим на копии с нашего сервера
+    this.localizedPhotos = localizePhotos(data.pets)
     this.data = data
     await this.backend.save(this.data)
     this.source = source
@@ -183,6 +211,8 @@ export class Store {
 
   /** откуда взялись данные при запуске: existing | import | seed — для лога */
   source = "existing"
+  /** сколько ссылок на Unsplash заменено копиями при запуске — для лога */
+  localizedPhotos = 0
 
   get db() {
     return this.data

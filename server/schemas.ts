@@ -107,11 +107,11 @@ export const applicationStatusSchema = z.object({
 export const commentSchema = z.object({ text: z.string().trim().min(1, { error: "Комментарий пустой" }).max(1000) })
 
 const compat = z.enum(["yes", "no", "unknown"])
-/** Фото — либо загруженный файл (/uploads/…), либо Unsplash */
+/** Фото — либо загруженный файл (/uploads/…), либо снимок из стартовых данных (/photos/…, public/photos) */
 const photoUrl = z
   .string()
   .max(500)
-  .refine((u) => /^\/uploads\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(u) || u.startsWith("https://images.unsplash.com/"), {
+  .refine((u) => /^\/uploads\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(u) || /^\/photos\/[0-9a-z-]+\.jpg$/.test(u), {
     error: "Фото должно быть загружено через форму",
   })
 

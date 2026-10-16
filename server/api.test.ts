@@ -1,6 +1,7 @@
 /* Интеграционные тесты API: npm run test:api (node:test, сервер на временной папке данных) */
 import assert from "node:assert/strict"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { existsSync } from "node:fs"
 import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -14,6 +15,7 @@ import { PostgresBackend } from "./postgres.ts"
 import { testDatabaseUrl } from "./test-db.ts"
 import { hashPassword, verifyPassword } from "./auth.ts"
 import { RateLimit, trustProxySetting } from "./rate-limit.ts"
+import { missionPhoto, seedPets } from "../src/lib/seed.ts"
 
 let base = ""
 let dir = ""
@@ -394,6 +396,36 @@ describe("миграция базы", () => {
       assert.equal(store.db.users.filter((u) => u.email === "olga@dobryi-dom.ru").length, 1, "существующие не дублируются")
     } finally {
       await rm(old, { recursive: true, force: true })
+    }
+  })
+
+  test("ссылки на Unsplash в старой базе заменяются копиями с нашего сервера, загруженные фото — нет", async () => {
+    const old = await mkdtemp(path.join(tmpdir(), "dobryi-dom-photos-"))
+    try {
+      const db = await seedDb()
+      const unsplash = (z: number) =>
+        `https://images.unsplash.com/photo-1519052537078-e6302a4968d4?crop=focalpoint&fp-x=0.62&fp-y=0.42&fp-z=${z}`
+      const uploaded = "/uploads/0123456789abcdef0123456789abcdef.jpg"
+      db.pets.find((p) => p.id === "persik")!.photos = [unsplash(2.16), uploaded, unsplash(1.2)]
+      await writeFile(path.join(old, "db.json"), JSON.stringify(db))
+      const store = await new Store(old).init()
+      assert.deepEqual(store.db.pets.find((p) => p.id === "persik")!.photos, [
+        "/photos/1519052537078-e6302a4968d4-zoom.jpg",
+        uploaded,
+        "/photos/1519052537078-e6302a4968d4.jpg",
+      ])
+      assert.equal(store.localizedPhotos, 2)
+      const saved = (await new JsonBackend(old).load())!
+      assert.ok(!JSON.stringify(saved.pets).includes("unsplash"), "замена сохранена")
+    } finally {
+      await rm(old, { recursive: true, force: true })
+    }
+  })
+
+  test("у каждого фото из стартовых данных есть файл в public/photos", () => {
+    for (const photo of [...seedPets.flatMap((p) => p.photos), missionPhoto]) {
+      assert.match(photo, /^\/photos\/[0-9a-z-]+\.jpg$/)
+      assert.ok(existsSync(path.join(import.meta.dirname, "..", "public", photo)), photo)
     }
   })
 })
