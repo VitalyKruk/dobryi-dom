@@ -37,7 +37,7 @@ function limitByIp(req: Request, res: Response, limit: RateLimit, message: strin
 
 /** Внутренние заметки видит только персонал */
 function publicPet(pet: Pet, viewer?: User): Pet {
-  if (can(viewer, "pets.status")) return pet
+  if (can(viewer, "pets.notes")) return pet
   const { internalNotes: _hidden, ...rest } = pet
   return rest
 }

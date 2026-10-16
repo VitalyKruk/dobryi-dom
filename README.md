@@ -49,7 +49,7 @@ REST API на Node 24 + Express 5 в [server/](server/). TypeScript запуск
 | `POST /api/auth/login`, `/register`, `/logout`                   | вход, регистрация, выход (после серии неудачных входов — `429`, см. ниже)                                              | все         |
 | `GET`/`PATCH /api/me`, `PUT /api/me/favorites`                   | профиль и избранное                                                                                                    | вошедшие    |
 | `POST`/`PUT`/`DELETE /api/pets…`, `POST /api/uploads`            | карточки питомцев и фото                                                                                               | админ       |
-| `PATCH /api/pets/:id/status`                                     | статус питомца                                                                                                         | персонал    |
+| `PATCH /api/pets/:id/status`                                     | статус питомца                                                                                                         | админ       |
 | `GET /api/users`, `PATCH /api/users/:id/role`, `/api/volunteers` | роли и волонтёры                                                                                                       | админ       |
 | `POST /api/volunteer-requests`, `/subscribe`, `/feedback`        | анкеты и подписка                                                                                                      | все         |
 | `GET /api/recommendations`                                       | подбор «Подходят вам»: по ответам (`?housing=&kids=&other=&experience=&species=`) или по анкете и избранному вошедшего | все         |
@@ -286,7 +286,7 @@ Workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) запус
 | Роль          | Email                  | Что доступно                                                            |
 | ------------- | ---------------------- | ----------------------------------------------------------------------- |
 | Пользователь  | anna@example.com       | Кабинет: заявки, «Подходят вам», избранное, профиль, уведомления        |
-| Волонтёр      | ivan@dobryi-dom.ru     | `/admin`: питомцы (только статусы), заявки (просмотр и комментарии)     |
+| Волонтёр      | ivan@dobryi-dom.ru     | `/admin`: питомцы (только просмотр), заявки (просмотр и комментарии)    |
 | Администратор | olga@dobryi-dom.ru     | Всё, включая редактирование питомцев, статусы заявок, волонтёров и роли |
 | Администратор | svetlana@dobryi-dom.ru | То же — второй администратор, куратор пристройства                      |
 

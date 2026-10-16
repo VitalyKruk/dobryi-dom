@@ -28,12 +28,28 @@ type AuthContextValue = {
  * настоящая проверка прав на сервере (server/auth.ts).
  */
 export type Permission =
-  "admin.access" | "pets.status" | "pets.edit" | "applications.view" | "applications.status" | "volunteers.manage" | "users.manage"
+  | "admin.access"
+  | "pets.notes"
+  | "pets.status"
+  | "pets.edit"
+  | "applications.view"
+  | "applications.status"
+  | "volunteers.manage"
+  | "users.manage"
 
 const permissions: Record<Role, Permission[]> = {
   user: [],
-  volunteer: ["admin.access", "pets.status", "applications.view"],
-  admin: ["admin.access", "pets.status", "pets.edit", "applications.view", "applications.status", "volunteers.manage", "users.manage"],
+  volunteer: ["admin.access", "pets.notes", "applications.view"],
+  admin: [
+    "admin.access",
+    "pets.notes",
+    "pets.status",
+    "pets.edit",
+    "applications.view",
+    "applications.status",
+    "volunteers.manage",
+    "users.manage",
+  ],
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)

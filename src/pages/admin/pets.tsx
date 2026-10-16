@@ -122,7 +122,7 @@ export default function AdminPetsPage() {
     <>
       <AdminHeading
         title="Питомцы"
-        subtitle={can("pets.edit") ? "Карточки, статусы и фото." : "Вы можете менять статусы питомцев."}
+        subtitle={can("pets.edit") ? "Карточки, статусы и фото." : "Просмотр карточек. Статусы и карточки меняет администратор."}
         actions={
           can("pets.edit") && (
             <Button asChild size="lg">

@@ -108,12 +108,28 @@ function persist() {
 // ——— «Запрос»: задержка сети, демо-режим, права, ошибки как у сервера ———
 
 type Permission =
-  "admin.access" | "pets.status" | "pets.edit" | "applications.view" | "applications.status" | "volunteers.manage" | "users.manage"
+  | "admin.access"
+  | "pets.notes"
+  | "pets.status"
+  | "pets.edit"
+  | "applications.view"
+  | "applications.status"
+  | "volunteers.manage"
+  | "users.manage"
 
 const permissions: Record<Role, Permission[]> = {
   user: [],
-  volunteer: ["admin.access", "pets.status", "applications.view"],
-  admin: ["admin.access", "pets.status", "pets.edit", "applications.view", "applications.status", "volunteers.manage", "users.manage"],
+  volunteer: ["admin.access", "pets.notes", "applications.view"],
+  admin: [
+    "admin.access",
+    "pets.notes",
+    "pets.status",
+    "pets.edit",
+    "applications.view",
+    "applications.status",
+    "volunteers.manage",
+    "users.manage",
+  ],
 }
 const can = (u: User | undefined, p: Permission) => !!u && permissions[u.role].includes(p)
 
@@ -161,7 +177,7 @@ async function call<T>(fn: (c: Ctx) => T | Promise<T>): Promise<T> {
 }
 
 function publicPet(pet: Pet, viewer?: User): Pet {
-  if (can(viewer, "pets.status")) return pet
+  if (can(viewer, "pets.notes")) return pet
   const { internalNotes: _hidden, ...rest } = pet
   return rest
 }
