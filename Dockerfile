@@ -33,7 +33,7 @@ CMD ["node", "server/index.ts"]
 
 # ——— Раздача статики (цель по умолчанию) ———
 # nginx-unprivileged работает от пользователя nginx (uid 101) и слушает 8080 — root не нужен
-FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 USER root
 # Базовый образ отстаёт от исправлений Alpine — подтягиваем их при сборке (кеш слоя — на день)
 ARG APK_UPGRADE_DATE=unset
